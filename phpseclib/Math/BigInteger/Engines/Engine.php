@@ -6,9 +6,9 @@
  * PHP version 5 and 7
  *
  * @author    Jim Wigginton <terrafrost@php.net>
- * @copyright 2017 Jim Wigginton
+ * @copyright 2017-2026 Jim Wigginton
  * @license   http://www.opensource.org/licenses/mit-license.html  MIT License
- * @link      http://pear.php.net/package/Math_BigInteger
+ * @link      https://phpseclib.com/
  */
 
 declare(strict_types=1);
@@ -16,7 +16,6 @@ declare(strict_types=1);
 namespace phpseclib4\Math\BigInteger\Engines;
 
 use phpseclib4\Common\Functions\Strings;
-use phpseclib4\Crypt\Random;
 use phpseclib4\Exception\{BadConfigurationException, InvalidArgumentException, ResourceLimitException};
 
 /**
@@ -771,7 +770,7 @@ abstract class Engine implements \JsonSerializable
             http://crypto.stackexchange.com/questions/5708/creating-a-small-number-from-a-cryptographically-secure-random-string
         */
         $random_max = new static(chr(1) . str_repeat("\0", $size), 256);
-        $random = new static(Random::string($size), 256);
+        $random = new static(random_bytes($size), 256);
 
         [$max_multiple] = $random_max->divide($max);
         $max_multiple = $max_multiple->multiply($max);
@@ -780,7 +779,7 @@ abstract class Engine implements \JsonSerializable
             $random = $random->subtract($max_multiple);
             $random_max = $random_max->subtract($max_multiple);
             $random = $random->bitwise_leftShift(8);
-            $random = $random->add(new static(Random::string(1), 256));
+            $random = $random->add(new static(random_bytes(1), 256));
             $random_max = $random_max->bitwise_leftShift(8);
             [$max_multiple] = $random_max->divide($max);
             $max_multiple = $max_multiple->multiply($max);
@@ -840,22 +839,20 @@ abstract class Engine implements \JsonSerializable
         $length = $this->getLengthInBytes();
 
         // see HAC 4.49 "Note (controlling the error probability)"
-        // @codingStandardsIgnoreStart
-             if ($length >= 163) { $t =  2; } // floor(1300 / 8)
-        else if ($length >= 106) { $t =  3; } // floor( 850 / 8)
-        else if ($length >= 81 ) { $t =  4; } // floor( 650 / 8)
-        else if ($length >= 68 ) { $t =  5; } // floor( 550 / 8)
-        else if ($length >= 56 ) { $t =  6; } // floor( 450 / 8)
-        else if ($length >= 50 ) { $t =  7; } // floor( 400 / 8)
-        else if ($length >= 43 ) { $t =  8; } // floor( 350 / 8)
-        else if ($length >= 37 ) { $t =  9; } // floor( 300 / 8)
-        else if ($length >= 31 ) { $t = 12; } // floor( 250 / 8)
-        else if ($length >= 25 ) { $t = 15; } // floor( 200 / 8)
-        else if ($length >= 18 ) { $t = 18; } // floor( 150 / 8)
-        else                     { $t = 27; }
-        // @codingStandardsIgnoreEnd
-
-        return $t;
+        return match (true) {
+            $length >= 163 =>  2, // floor(1300 / 8)
+            $length >= 106 =>  3, // floor( 850 / 8)
+            $length >= 81  =>  4, // floor( 650 / 8)
+            $length >= 68  =>  5, // floor( 550 / 8)
+            $length >= 56  =>  6, // floor( 450 / 8)
+            $length >= 50  =>  7, // floor( 400 / 8)
+            $length >= 43  =>  8, // floor( 350 / 8)
+            $length >= 37  =>  9, // floor( 300 / 8)
+            $length >= 31  => 12, // floor( 250 / 8)
+            $length >= 25  => 15, // floor( 200 / 8)
+            $length >= 18  => 18, // floor( 150 / 8)
+            default        => 27,
+        };
     }
 
     /**

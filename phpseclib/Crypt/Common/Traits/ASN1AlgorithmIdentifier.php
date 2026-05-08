@@ -3,19 +3,19 @@
 /**
  * PKCS12 PBKDF Helper for Symmetric Keys and MACs
  *
- * PHP version 5
+ * PHP version 8.1+
  *
  * @author    Jim Wigginton <terrafrost@php.net>
- * @copyright 2015 Jim Wigginton
+ * @copyright 2025-2026 Jim Wigginton
  * @license   http://www.opensource.org/licenses/mit-license.html  MIT License
- * @link      http://phpseclib.sourceforge.net
+ * @link      https://phpseclib.com/
  */
 
 declare(strict_types=1);
 
 namespace phpseclib4\Crypt\Common\Traits;
 
-use phpseclib4\Crypt\{AES, DES, RC2, RC4, Random, TripleDES};
+use phpseclib4\Crypt\{AES, DES, RC2, RC4, TripleDES};
 use phpseclib4\Crypt\Common\SymmetricKey;
 use phpseclib4\Exception\UnsupportedAlgorithmException;
 use phpseclib4\File\ASN1;
@@ -199,8 +199,10 @@ trait ASN1AlgorithmIdentifier
         return $cipher;
     }
 
-    private static function getCryptoObjectFromAlgorithmIdentifier(array|Constructed $data, string $password): SymmetricKey
-    {
+    private static function getCryptoObjectFromAlgorithmIdentifier(
+        array|Constructed $data,
+        #[SensitiveParameter] string $password
+    ): SymmetricKey {
         $meta = [];
         $algorithm = (string) $data['algorithm'];
         switch ($algorithm) {
@@ -271,8 +273,11 @@ trait ASN1AlgorithmIdentifier
         }
     }
 
-    protected static function setupPBKDF2(array|Constructed $keyDerivationFunc, string $password, SymmetricKey $cipher): void
-    {
+    protected static function setupPBKDF2(
+        array|Constructed $keyDerivationFunc,
+        #[SensitiveParameter] string $password,
+        SymmetricKey $cipher
+    ): void {
         switch ($keyDerivationFunc['algorithm']) {
             case 'id-PBKDF2':
                 $meta = $cipher->hasMetaData('meta') ? $cipher->getMetaData('meta') : [];
@@ -303,7 +308,7 @@ trait ASN1AlgorithmIdentifier
 
     private static function getCryptoObjectFromParams(string $password, array $options): SymmetricKey
     {
-        $salt = Random::string(8);
+        $salt = random_bytes(8);
 
         $iterationCount = $options['iterationCount'] ?? self::$defaultIterationCount;
         $encryptionAlgorithm = $options['encryptionAlgorithm'] ?? self::$defaultEncryptionAlgorithm;
@@ -314,7 +319,7 @@ trait ASN1AlgorithmIdentifier
             $crypto = self::getPBES2EncryptionObject($encryptionScheme);
             $hash = str_replace('-', '/', substr($prf, 11));
             $kdf = 'pbkdf2';
-            $iv = Random::string($crypto->getBlockLength() >> 3);
+            $iv = random_bytes($crypto->getBlockLength() >> 3);
 
             $PBKDF2params = [
                 'salt' => $salt,

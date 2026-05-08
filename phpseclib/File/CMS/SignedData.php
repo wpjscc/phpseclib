@@ -8,9 +8,9 @@
  * Encode and decode CMS / SignedData files.
  *
  * @author    Jim Wigginton <terrafrost@php.net>
- * @copyright 2022 Jim Wigginton
+ * @copyright 2026 Jim Wigginton
  * @license   http://www.opensource.org/licenses/mit-license.html  MIT License
- * @link      http://phpseclib.sourceforge.net
+ * @link      https://phpseclib.com/
  */
 
 declare(strict_types=1);
@@ -103,10 +103,10 @@ class SignedData implements \ArrayAccess, \Countable, \Iterator, Signable
         $cms = ASN1::map($decoded, Maps\ContentInfo::MAP);
         ASN1::disableCacheInvalidation();
         $rules = [];
-        $rules['certificates'] = [self::class, 'mapInCerts'];
-        $rules['crls'] = [self::class, 'mapInCRLs'];
-        $rules['signerInfos'] = [self::class, 'mapInSigners'];
-        $rules['encapContentInfo'] = [self::class, 'mapInEncapContentInfo'];
+        $rules['certificates'] = self::mapInCerts(...);
+        $rules['crls'] = self::mapInCRLs(...);
+        $rules['signerInfos'] = self::mapInSigners(...);
+        $rules['encapContentInfo'] = self::mapInEncapContentInfo(...);
         $decoded = ASN1::decodeBER($cms['content']->value);
         $cms['content'] = ASN1::map($decoded, Maps\SignedData::MAP, $rules);
         $cms['content']->parent = $cms;

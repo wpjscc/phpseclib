@@ -2,7 +2,7 @@
 
 /**
  * @author    Andreas Fischer <bantu@phpbb.com>
- * @copyright 2014 Andreas Fischer
+ * @copyright 2014-2026 Andreas Fischer
  * @license   http://www.opensource.org/licenses/mit-license.html  MIT License
  */
 
@@ -13,9 +13,9 @@ use phpseclib4\Tests\PhpseclibFunctionalTestCase;
 
 class SCPSSH2UserStoryTest extends PhpseclibFunctionalTestCase
 {
-    static protected $remoteFile;
-    static protected $exampleData;
-    static protected $exampleDataLength;
+    protected static $remoteFile;
+    protected static $exampleData;
+    protected static $exampleDataLength;
 
     public static function setUpBeforeClass(): void
     {
@@ -41,7 +41,7 @@ class SCPSSH2UserStoryTest extends PhpseclibFunctionalTestCase
         return $scp;
     }
 
-    /** @depends testConstructor */
+    #[\PHPUnit\Framework\Attributes\Depends('testConstructor')]
     public function testPutGetString($scp)
     {
         $scp->put(self::$remoteFile, self::$exampleData);
@@ -59,7 +59,7 @@ class SCPSSH2UserStoryTest extends PhpseclibFunctionalTestCase
         return $scp;
     }
 
-    /** @depends testPutGetString */
+    #[\PHPUnit\Framework\Attributes\Depends('testPutGetString')]
     public function testGetFile($scp)
     {
         $localFilename = $this->createTempFile();
@@ -80,7 +80,7 @@ class SCPSSH2UserStoryTest extends PhpseclibFunctionalTestCase
     /**
      * @group github873
      */
-    /** @depends testGetFile */
+    #[\PHPUnit\Framework\Attributes\Depends('testGetFile')]
     public function testGetBadFilePutGet($scp)
     {
         $scp->exec('rm ' . self::$remoteFile);

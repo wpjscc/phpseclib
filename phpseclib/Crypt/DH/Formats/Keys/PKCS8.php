@@ -3,7 +3,7 @@
 /**
  * PKCS#8 Formatted DH Key Handler
  *
- * PHP version 5
+ * PHP version 8.1+
  *
  * Processes keys with the following headers:
  *
@@ -12,9 +12,9 @@
  * -----BEGIN PUBLIC KEY-----
  *
  * @author    Jim Wigginton <terrafrost@php.net>
- * @copyright 2015 Jim Wigginton
+ * @copyright 2016-2026 Jim Wigginton
  * @license   http://www.opensource.org/licenses/mit-license.html  MIT License
- * @link      http://phpseclib.sourceforge.net
+ * @link      https://phpseclib.com/
  */
 
 declare(strict_types=1);
@@ -56,8 +56,10 @@ abstract class PKCS8 extends Progenitor
     /**
      * Break a public or private key down into its constituent components
      */
-    public static function load(string $key, #[SensitiveParameter] ?string $password = null): array
-    {
+    public static function load(
+        #[SensitiveParameter] string $key,
+        #[SensitiveParameter] ?string $password = null
+    ): array {
         $isPublic = str_contains($key, 'PUBLIC');
 
         $key = parent::load($key, $password);
@@ -86,8 +88,14 @@ abstract class PKCS8 extends Progenitor
     /**
      * Convert a private key to the appropriate format.
      */
-    public static function savePrivateKey(BigInteger $prime, BigInteger $base, BigInteger $privateKey, BigInteger $publicKey, ?string $password = null, array $options = []): string
-    {
+    public static function savePrivateKey(
+        BigInteger $prime,
+        BigInteger $base,
+        BigInteger $privateKey,
+        BigInteger $publicKey,
+        #[SensitiveParameter] ?string $password = null,
+        array $options = []
+    ): string {
         $params = [
             'prime' => $prime,
             'base' => $base,

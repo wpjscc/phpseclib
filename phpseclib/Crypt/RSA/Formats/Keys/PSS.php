@@ -3,7 +3,7 @@
 /**
  * PKCS#8 Formatted RSA-PSS Key Handler
  *
- * PHP version 5
+ * PHP version 8.1+
  *
  * Used by PHP's openssl_public_encrypt() and openssl's rsautl (when -pubin is set)
  *
@@ -16,9 +16,9 @@
  * Analogous to "openssl genpkey -algorithm rsa-pss".
  *
  * @author    Jim Wigginton <terrafrost@php.net>
- * @copyright 2015 Jim Wigginton
+ * @copyright 2019-2026 Jim Wigginton
  * @license   http://www.opensource.org/licenses/mit-license.html  MIT License
- * @link      http://phpseclib.sourceforge.net
+ * @link      https://phpseclib.com/
  */
 
 declare(strict_types=1);
@@ -75,8 +75,10 @@ abstract class PSS extends Progenitor
     /**
      * Break a public or private key down into its constituent components
      */
-    public static function load(string $key, ?string $password = null): array
-    {
+    public static function load(
+        #[SensitiveParameter] string $key,
+        #[SensitiveParameter] ?string $password = null
+    ): array {
         self::initialize_static_variables();
 
         $components = match (true) {
@@ -138,8 +140,16 @@ abstract class PSS extends Progenitor
     /**
      * Convert a private key to the appropriate format.
      */
-    public static function savePrivateKey(BigInteger $n, BigInteger $e, BigInteger $d, array $primes, array $exponents, array $coefficients, ?string $password = null, array $options = []): string
-    {
+    public static function savePrivateKey(
+        BigInteger $n,
+        BigInteger $e,
+        #[SensitiveParameter] BigInteger $d,
+        #[SensitiveParameter] array $primes,
+        #[SensitiveParameter] array $exponents,
+        #[SensitiveParameter] array $coefficients,
+        #[SensitiveParameter] ?string $password = null,
+        array $options = []
+    ): string {
         self::initialize_static_variables();
 
         $key = PKCS1::savePrivateKey($n, $e, $d, $primes, $exponents, $coefficients);

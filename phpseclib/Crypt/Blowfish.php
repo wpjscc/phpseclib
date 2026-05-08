@@ -5,7 +5,7 @@
  *
  * Uses an internal implementation.
  *
- * PHP version 5
+ * PHP version 8.1+
  *
  * Useful resources are as follows:
  *
@@ -105,9 +105,9 @@
  *
  * @author    Jim Wigginton <terrafrost@php.net>
  * @author    Hans-Juergen Petrich <petrich@tronic-media.com>
- * @copyright 2007 Jim Wigginton
+ * @copyright 2013-2026 Jim Wigginton
  * @license   http://www.opensource.org/licenses/mit-license.html  MIT License
- * @link      http://phpseclib.sourceforge.net
+ * @link      https://phpseclib.com/
  */
 
 declare(strict_types=1);
@@ -410,8 +410,8 @@ class Blowfish extends BlockCipher
     protected static function initialize_static_variables(): void
     {
         if (is_float(self::$sbox[0x200])) {
-            self::$sbox = array_map([self::class, 'safe_intval'], self::$sbox);
-            self::$parray = array_map([self::class, 'safe_intval'], self::$parray);
+            self::$sbox = array_map(self::safe_intval(...), self::$sbox);
+            self::$parray = array_map(self::safe_intval(...), self::$parray);
         }
 
         parent::initialize_static_variables();
@@ -447,8 +447,12 @@ class Blowfish extends BlockCipher
     /**
      * Performs OpenSSH-style bcrypt
      */
-    public static function bcrypt_pbkdf(string $pass, string $salt, int $keylen, int $rounds): string
-    {
+    public static function bcrypt_pbkdf(
+        #[SensitiveParameter] string $pass,
+        string $salt,
+        int $keylen,
+        int $rounds
+    ): string {
         self::initialize_static_variables();
 
         if (PHP_INT_SIZE == 4) {

@@ -5,7 +5,7 @@
  *
  * Uses OpenSSL, if available/possible, and an internal implementation, otherwise
  *
- * PHP version 5
+ * PHP version 8.1+
  *
  * Useful resources are as follows:
  *
@@ -35,9 +35,9 @@
  * </code>
  *
  * @author    Jim Wigginton <terrafrost@php.net>
- * @copyright 2007 Jim Wigginton
+ * @copyright 2007-2026 Jim Wigginton
  * @license   http://www.opensource.org/licenses/mit-license.html  MIT License
- * @link      http://phpseclib.sourceforge.net
+ * @link      https://phpseclib.com/
  */
 
 declare(strict_types=1);
@@ -126,7 +126,7 @@ class RC4 extends StreamCipher
      *
      * Keys can be between 1 and 256 bytes long.
      */
-    public function setKey(string $key): void
+    public function setKey(#[SensitiveParameter] string $key): void
     {
         $length = strlen($key);
         if ($length < 1 || $length > 256) {
@@ -143,7 +143,7 @@ class RC4 extends StreamCipher
      * @see Common\SymmetricKey::decrypt()
      * @see self::crypt()
      */
-    public function encrypt(string $plaintext): string
+    public function encrypt(#[SensitiveParameter] string $plaintext): string
     {
         if ($this->engine != self::ENGINE_INTERNAL) {
             return parent::encrypt($plaintext);

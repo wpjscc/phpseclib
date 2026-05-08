@@ -3,7 +3,7 @@
 /**
  * PKCS#8 Formatted EC Key Handler
  *
- * PHP version 5
+ * PHP version 8.1+
  *
  * Processes keys with the following headers:
  *
@@ -16,9 +16,9 @@
  * for keys. This just extends that same concept to public keys (much like ssh-keygen)
  *
  * @author    Jim Wigginton <terrafrost@php.net>
- * @copyright 2015 Jim Wigginton
+ * @copyright 2018-2026 Jim Wigginton
  * @license   http://www.opensource.org/licenses/mit-license.html  MIT License
- * @link      http://phpseclib.sourceforge.net
+ * @link      https://phpseclib.com/
  */
 
 declare(strict_types=1);
@@ -64,8 +64,10 @@ abstract class PKCS8 extends Progenitor
     /**
      * Break a public or private key down into its constituent components
      */
-    public static function load(string $key, #[SensitiveParameter] ?string $password = null): array
-    {
+    public static function load(
+        #[SensitiveParameter] string $key,
+        #[SensitiveParameter] ?string $password = null
+    ): array {
         // initialize_static_variables() is defined in both the trait and the parent class
         // when it's defined in two places it's the traits one that's called
         // the parent one is needed, as well, but the parent one is called by other methods
@@ -169,7 +171,7 @@ abstract class PKCS8 extends Progenitor
         return $components;
     }
 
-    private static function loadECDH(array $key): array
+    private static function loadECDH(#[SensitiveParameter] array $key): array
     {
         $components = [];
 
@@ -250,8 +252,14 @@ abstract class PKCS8 extends Progenitor
      *
      * @param Integer[] $publicKey
      */
-    public static function savePrivateKey(BigInteger $privateKey, BaseCurve $curve, array $publicKey, ?string $secret = null, #[SensitiveParameter] ?string $password = null, array $options = []): string
-    {
+    public static function savePrivateKey(
+        #[SensitiveParameter] BigInteger $privateKey,
+        BaseCurve $curve,
+        array $publicKey,
+        #[SensitiveParameter] ?string $secret = null,
+        #[SensitiveParameter] ?string $password = null,
+        array $options = []
+    ): string {
         self::initialize_static_variables();
 
         if ($curve instanceof MontgomeryCurve) {

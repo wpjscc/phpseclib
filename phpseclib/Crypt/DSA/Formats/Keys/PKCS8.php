@@ -3,7 +3,7 @@
 /**
  * PKCS#8 Formatted DSA Key Handler
  *
- * PHP version 5
+ * PHP version 8.1+
  *
  * Processes keys with the following headers:
  *
@@ -16,9 +16,9 @@
  * for keys. This just extends that same concept to public keys (much like ssh-keygen)
  *
  * @author    Jim Wigginton <terrafrost@php.net>
- * @copyright 2015 Jim Wigginton
+ * @copyright 2016-2026 Jim Wigginton
  * @license   http://www.opensource.org/licenses/mit-license.html  MIT License
- * @link      http://phpseclib.sourceforge.net
+ * @link      https://phpseclib.com/
  */
 
 declare(strict_types=1);
@@ -60,8 +60,10 @@ abstract class PKCS8 extends Progenitor
     /**
      * Break a public or private key down into its constituent components
      */
-    public static function load(string $key, #[SensitiveParameter] ?string $password = null): array
-    {
+    public static function load(
+        #[SensitiveParameter] string $key,
+        #[SensitiveParameter] ?string $password = null
+    ): array {
         if (str_contains($key, 'PUBLIC')) {
             $isPublic = true;
         } elseif (str_contains($key, 'PRIVATE')) {
@@ -101,8 +103,15 @@ abstract class PKCS8 extends Progenitor
     /**
      * Convert a private key to the appropriate format.
      */
-    public static function savePrivateKey(BigInteger $p, BigInteger $q, BigInteger $g, BigInteger $y, BigInteger $x, #[SensitiveParameter] ?string $password = null, array $options = []): string
-    {
+    public static function savePrivateKey(
+        BigInteger $p,
+        BigInteger $q,
+        BigInteger $g,
+        BigInteger $y,
+        #[SensitiveParameter] BigInteger $x,
+        #[SensitiveParameter] ?string $password = null,
+        array $options = []
+    ): string {
         $params = [
             'p' => $p,
             'q' => $q,
@@ -122,8 +131,13 @@ abstract class PKCS8 extends Progenitor
     /**
      * Convert a public key to the appropriate format
      */
-    public static function savePublicKey(BigInteger $p, BigInteger $q, BigInteger $g, BigInteger $y, array $options = []): string
-    {
+    public static function savePublicKey(
+        BigInteger $p,
+        BigInteger $q,
+        BigInteger $g,
+        BigInteger $y,
+        array $options = []
+    ): string {
         $params = [
             'p' => $p,
             'q' => $q,

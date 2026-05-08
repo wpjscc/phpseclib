@@ -3,12 +3,12 @@
 /**
  * JSON Web Key (RFC7517 / RFC8037) Formatted EC Handler
  *
- * PHP version 5
+ * PHP version 8.1+
  *
  * @author    Jim Wigginton <terrafrost@php.net>
- * @copyright 2015 Jim Wigginton
+ * @copyright 2022-2026 Jim Wigginton
  * @license   http://www.opensource.org/licenses/mit-license.html  MIT License
- * @link      http://phpseclib.sourceforge.net
+ * @link      https://phpseclib.com/
  */
 
 declare(strict_types=1);
@@ -34,8 +34,10 @@ abstract class JWK extends Progenitor
     /**
      * Break a public or private key down into its constituent components
      */
-    public static function load(string $key, #[SensitiveParameter] ?string $password = null): array
-    {
+    public static function load(
+        #[SensitiveParameter] string $key,
+        #[SensitiveParameter] ?string $password = null
+    ): array {
         $key = parent::loadHelper($key);
 
         switch ($key->kty) {
@@ -159,12 +161,11 @@ abstract class JWK extends Progenitor
      * @param \phpseclib4\Math\Common\FiniteField\Integer[] $publicKey
      */
     public static function savePrivateKey(
-        BigInteger $privateKey,
+        #[SensitiveParameter] BigInteger $privateKey,
         BaseCurve $curve,
         array $publicKey,
-        ?string $secret = null,
-        #[SensitiveParameter]
-        ?string $password = null,
+        #[SensitiveParameter] ?string $secret = null,
+        #[SensitiveParameter] ?string $password = null,
         array $options = []
     ): string {
         if (isset($password)) {

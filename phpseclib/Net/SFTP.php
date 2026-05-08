@@ -3,7 +3,7 @@
 /**
  * Pure-PHP implementation of SFTP.
  *
- * PHP version 5
+ * PHP version 8.1+
  *
  * Supports SFTPv2/3/4/5/6. Defaults to v3.
  *
@@ -26,9 +26,9 @@
  * </code>
  *
  * @author    Jim Wigginton <terrafrost@php.net>
- * @copyright 2009 Jim Wigginton
+ * @copyright 2009-2026 Jim Wigginton
  * @license   http://www.opensource.org/licenses/mit-license.html  MIT License
- * @link      http://phpseclib.sourceforge.net
+ * @link      https://phpseclib.com/
  */
 
 declare(strict_types=1);
@@ -905,7 +905,7 @@ class SFTP extends SSH2
         $this->close_handle($handle);
 
         if (count($this->sortOptions)) {
-            uasort($contents, [&$this, 'comparator']);
+            uasort($contents, $this->comparator(...));
         }
 
         return $raw ? $contents : array_map('strval', array_keys($contents));
@@ -1150,7 +1150,7 @@ class SFTP extends SSH2
     {
         $this->precheck();
 
-        $this->realpath($filename);
+        $filename = $this->realpath($filename);
 
         if ($this->use_stat_cache) {
             $result = $this->query_stat_cache($filename);
@@ -1612,8 +1612,14 @@ class SFTP extends SSH2
      *
      * @param  resource|string $data
      */
-    public function put(string $remote_file, mixed $data, int $mode = self::SOURCE_STRING, int $start = -1, int $local_start = -1, ?\Closure $progressCallback = null): void
-    {
+    public function put(
+        string $remote_file,
+        #[SensitiveParameter] mixed $data,
+        int $mode = self::SOURCE_STRING,
+        int $start = -1,
+        int $local_start = -1,
+        ?\Closure $progressCallback = null
+    ): void {
         $this->precheck();
 
         $remote_file = $this->realpath($remote_file);
@@ -1923,7 +1929,7 @@ class SFTP extends SSH2
                             $this->init_sftp_connection();
                             throw new ConnectionClosedException('Connection closed while downloading file');
                         } else {
-                            throw new UnexpectedSFTPPacketException (
+                            throw new UnexpectedSFTPPacketException(
                                 'Expected SSH_FXP_DATA or SSH_FXP_STATUS. ' .
                                 'Got packet type: SSH_FXP_' . SFTPPacketType::getConstantNameByValue($this->packet_type)
                             );
@@ -2545,7 +2551,7 @@ class SFTP extends SSH2
      * @see self::_get_sftp_packet()
      * @see self::send_channel_packet()
      */
-    private function send_sftp_packet(int $type, string $data, int $request_id = 1): void
+    private function send_sftp_packet(int $type, #[SensitiveParameter] string $data, int $request_id = 1): void
     {
         // in SSH2.php the timeout is cumulative per function call. eg. exec() will
         // timeout after 10s. but for SFTP.php it's cumulative per packet

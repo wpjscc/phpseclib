@@ -5,7 +5,7 @@
  *
  * Uses an internal implementation.
  *
- * PHP version 5
+ * PHP version 8.1+
  *
  * Useful resources are as follows:
  *
@@ -28,9 +28,9 @@
  *
  * @author    Jim Wigginton <terrafrost@php.net>
  * @author    Hans-Juergen Petrich <petrich@tronic-media.com>
- * @copyright 2007 Jim Wigginton
+ * @copyright 2013-2026 Jim Wigginton
  * @license   http://www.opensource.org/licenses/mit-license.html  MIT License
- * @link      http://phpseclib.sourceforge.net
+ * @link      https://phpseclib.com/
  */
 
 declare(strict_types=1);
@@ -331,12 +331,12 @@ class Twofish extends BlockCipher
     protected static function initialize_static_variables(): void
     {
         if (is_float(self::$m3[0])) {
-            self::$m0 = array_map([self::class, 'safe_intval'], self::$m0);
-            self::$m1 = array_map([self::class, 'safe_intval'], self::$m1);
-            self::$m2 = array_map([self::class, 'safe_intval'], self::$m2);
-            self::$m3 = array_map([self::class, 'safe_intval'], self::$m3);
-            self::$q0 = array_map([self::class, 'safe_intval'], self::$q0);
-            self::$q1 = array_map([self::class, 'safe_intval'], self::$q1);
+            self::$m0 = array_map(self::safe_intval(...), self::$m0);
+            self::$m1 = array_map(self::safe_intval(...), self::$m1);
+            self::$m2 = array_map(self::safe_intval(...), self::$m2);
+            self::$m3 = array_map(self::safe_intval(...), self::$m3);
+            self::$q0 = array_map(self::safe_intval(...), self::$q0);
+            self::$q1 = array_map(self::safe_intval(...), self::$q1);
         }
 
         parent::initialize_static_variables();
@@ -369,7 +369,7 @@ class Twofish extends BlockCipher
      * @throws LengthException if the key length isn't supported
      * @see self::setKeyLength()
      */
-    public function setKey(string $key): void
+    public function setKey(#[SensitiveParameter] string $key): void
     {
         switch (strlen($key)) {
             case 16:

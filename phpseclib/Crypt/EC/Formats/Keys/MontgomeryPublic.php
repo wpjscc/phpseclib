@@ -3,12 +3,12 @@
 /**
  * Montgomery Public Key Handler
  *
- * PHP version 5
+ * PHP version 8.1+
  *
  * @author    Jim Wigginton <terrafrost@php.net>
- * @copyright 2015 Jim Wigginton
+ * @copyright 2019-2026 Jim Wigginton
  * @license   http://www.opensource.org/licenses/mit-license.html  MIT License
- * @link      http://phpseclib.sourceforge.net
+ * @link      https://phpseclib.com/
  */
 
 declare(strict_types=1);
@@ -36,8 +36,10 @@ abstract class MontgomeryPublic
     /**
      * Break a public or private key down into its constituent components
      */
-    public static function load(string $key, #[SensitiveParameter] ?string $password = null): array
-    {
+    public static function load(
+        #[SensitiveParameter] string $key,
+        #[SensitiveParameter] ?string $password = null
+    ): array {
         $curve = match (strlen($key)) {
             32 => new Curve25519(),
             56 => new Curve448(),
@@ -55,7 +57,7 @@ abstract class MontgomeryPublic
      *
      * @param Integer[] $publicKey
      */
-    public static function savePublicKey(MontgomeryCurve $curve, array $publicKey): string
+    public static function savePublicKey(MontgomeryCurve $curve, array $publicKey, array $options = []): string
     {
         return strrev($publicKey[0]->toBytes());
     }

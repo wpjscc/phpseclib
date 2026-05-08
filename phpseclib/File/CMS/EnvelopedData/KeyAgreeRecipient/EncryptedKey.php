@@ -8,9 +8,9 @@
  * Encode and decode CMS / EnvelopedData / KeyAgreeRecipient / EncryptedKey files.
  *
  * @author    Jim Wigginton <terrafrost@php.net>
- * @copyright 2022 Jim Wigginton
+ * @copyright 2026 Jim Wigginton
  * @license   http://www.opensource.org/licenses/mit-license.html  MIT License
- * @link      http://phpseclib.sourceforge.net
+ * @link      https://phpseclib.com/
  */
 
 declare(strict_types=1);
@@ -45,8 +45,8 @@ class EncryptedKey implements DerivableKey, SearchableKey, \ArrayAccess, \Counta
     {
         $r = new \ReflectionClass(__CLASS__);
         $cms = $r->newInstanceWithoutConstructor();
-        $temp->encryptedKey = is_string($encoded) ? static::loadString($encoded) : $encoded;
-        return $temp;
+        $cms->encryptedKey = is_string($encoded) ? static::loadString($encoded) : $encoded;
+        return $cms;
     }
 
     protected static function loadString(string $encoded): Constructed

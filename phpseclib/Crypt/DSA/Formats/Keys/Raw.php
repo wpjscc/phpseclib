@@ -3,14 +3,14 @@
 /**
  * Raw DSA Key Handler
  *
- * PHP version 5
+ * PHP version 8.1+
  *
  * Reads and creates arrays as DSA keys
  *
  * @author    Jim Wigginton <terrafrost@php.net>
- * @copyright 2015 Jim Wigginton
+ * @copyright 2016-2026 Jim Wigginton
  * @license   http://www.opensource.org/licenses/mit-license.html  MIT License
- * @link      http://phpseclib.sourceforge.net
+ * @link      https://phpseclib.com/
  */
 
 declare(strict_types=1);
@@ -30,8 +30,10 @@ abstract class Raw
     /**
      * Break a public or private key down into its constituent components
      */
-    public static function load(array $key, #[SensitiveParameter] ?string $password = null): array
-    {
+    public static function load(
+        #[SensitiveParameter] array $key,
+        #[SensitiveParameter] ?string $password = null
+    ): array {
         switch (true) {
             case !isset($key['p']) || !isset($key['q']) || !isset($key['g']):
             case !$key['p'] instanceof BigInteger:

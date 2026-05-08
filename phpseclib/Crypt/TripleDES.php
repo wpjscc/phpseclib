@@ -7,7 +7,7 @@
  *
  * Operates in the EDE3 mode (encrypt-decrypt-encrypt).
  *
- * PHP version 5
+ * PHP version 8.1+
  *
  * Here's a short example of how to use this library:
  * <code>
@@ -29,9 +29,9 @@
  * </code>
  *
  * @author    Jim Wigginton <terrafrost@php.net>
- * @copyright 2007 Jim Wigginton
+ * @copyright 2007-2026 Jim Wigginton
  * @license   http://www.opensource.org/licenses/mit-license.html  MIT License
- * @link      http://phpseclib.sourceforge.net
+ * @link      https://phpseclib.com/
  */
 
 declare(strict_types=1);
@@ -183,7 +183,6 @@ class TripleDES extends DES
      *
      * If you want to use a 64-bit key use DES.php
      *
-     * @throws LengthException if the key length is invalid
      * @see Common\SymmetricKey:setKeyLength()
      */
     public function setKeyLength(int $length): void
@@ -206,11 +205,10 @@ class TripleDES extends DES
      *
      * DES also requires that every eighth bit be a parity bit, however, we'll ignore that.
      *
-     * @throws LengthException if the key length is invalid
      * @see DES::setKey()
      * @see Common\SymmetricKey::setKey()
      */
-    public function setKey(string $key): void
+    public function setKey(#[SensitiveParameter] string $key): void
     {
         if (isset($this->explicit_key_length) && strlen($key) != $this->explicit_key_length) {
             throw new LengthException('Key length has already been set to ' . $this->explicit_key_length . ' bytes and this key is ' . strlen($key) . ' bytes');

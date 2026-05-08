@@ -3,12 +3,12 @@
 /**
  * Pure-PHP implementation of Salsa20.
  *
- * PHP version 5
+ * PHP version 8.1+
  *
  * @author    Jim Wigginton <terrafrost@php.net>
- * @copyright 2019 Jim Wigginton
+ * @copyright 2019-2026 Jim Wigginton
  * @license   http://www.opensource.org/licenses/mit-license.html  MIT License
- * @link      http://phpseclib.sourceforge.net
+ * @link      https://phpseclib.com/
  */
 
 declare(strict_types=1);
@@ -81,10 +81,8 @@ class Salsa20 extends StreamCipher
 
     /**
      * Sets the key.
-     *
-     * @throws LengthException if the key length isn't supported
      */
-    public function setKey(string $key): void
+    public function setKey(#[SensitiveParameter] string $key): void
     {
         switch (strlen($key)) {
             case 16:
@@ -144,6 +142,8 @@ class Salsa20 extends StreamCipher
         if ($this->counter == 0) {
             $this->counter++;
         }
+
+        $this->usingGeneratedPoly1305Key = true;
     }
 
     /**
@@ -220,7 +220,7 @@ class Salsa20 extends StreamCipher
      * @see \phpseclib4\Crypt\Common\SymmetricKey::decrypt()
      * @see self::crypt()
      */
-    public function encrypt(string $plaintext): string
+    public function encrypt(#[SensitiveParameter] string $plaintext): string
     {
         $ciphertext = $this->crypt($plaintext, self::ENCRYPT);
         if (isset($this->poly1305Key)) {

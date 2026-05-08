@@ -3,12 +3,12 @@
 /**
  * Generic EC Key Parsing Helper functions
  *
- * PHP version 5
+ * PHP version 8.1+
  *
  * @author    Jim Wigginton <terrafrost@php.net>
- * @copyright 2015 Jim Wigginton
+ * @copyright 2018-2026 Jim Wigginton
  * @license   http://www.opensource.org/licenses/mit-license.html  MIT License
- * @link      http://phpseclib.sourceforge.net
+ * @link      https://phpseclib.com/
  */
 
 declare(strict_types=1);
@@ -74,10 +74,8 @@ trait Common
     /**
      * Returns an instance of \phpseclib4\Crypt\EC\BaseCurves\Base based
      * on the curve parameters
-     *
-     * @return BaseCurve|false
      */
-    protected static function loadCurveByParam(array $params)
+    protected static function loadCurveByParam(array $params): BaseCurve
     {
         if (count($params) > 1) {
             throw new UnexpectedValueException('No parameters are present');

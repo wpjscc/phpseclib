@@ -5,12 +5,12 @@
  *
  * See PuTTY's SSHPUBK.C and https://tartarus.org/~simon/putty-snapshots/htmldoc/AppendixC.html
  *
- * PHP version 5
+ * PHP version 8.1+
  *
  * @author    Jim Wigginton <terrafrost@php.net>
- * @copyright 2016 Jim Wigginton
+ * @copyright 2016-2026 Jim Wigginton
  * @license   http://www.opensource.org/licenses/mit-license.html  MIT License
- * @link      http://phpseclib.sourceforge.net
+ * @link      https://phpseclib.com/
  */
 
 declare(strict_types=1);
@@ -18,7 +18,7 @@ declare(strict_types=1);
 namespace phpseclib4\Crypt\Common\Formats\Keys;
 
 use phpseclib4\Common\Functions\Strings;
-use phpseclib4\Crypt\{AES, Hash, Random};
+use phpseclib4\Crypt\{AES, Hash};
 use phpseclib4\Exception\{
     BadConfigurationException,
     PasswordNeededException,
@@ -80,8 +80,13 @@ abstract class PuTTY
     /**
      * Generate a symmetric key for PuTTY v3 keys
      */
-    private static function generateV3Key(string $password, string $flavour, int $memory, int $passes, string $salt): array
-    {
+    private static function generateV3Key(
+        #[SensitiveParameter] string $password,
+        string $flavour,
+        int $memory,
+        int $passes,
+        string $salt
+    ): array {
         if (!function_exists('sodium_crypto_pwhash')) {
             throw new BadConfigurationException('sodium_crypto_pwhash needs to exist for Argon2 password hasing');
         }
@@ -105,8 +110,10 @@ abstract class PuTTY
     /**
      * Break a public or private key down into its constituent components
      */
-    public static function load(string $key, ?string $password): array
-    {
+    public static function load(
+        #[SensitiveParameter] string $key,
+        #[SensitiveParameter] ?string $password
+    ): array {
 
         if (str_contains($key, 'BEGIN SSH2 PUBLIC KEY')) {
             $lines = preg_split('#[\r\n]+#', $key);
@@ -248,8 +255,13 @@ abstract class PuTTY
     /**
      * Wrap a private key appropriately
      */
-    protected static function wrapPrivateKey(string $public, string $private, string $type, ?string $password, array $options = []): string
-    {
+    protected static function wrapPrivateKey(
+        string $public,
+        #[SensitiveParameter] string $private,
+        string $type,
+        #[SensitiveParameter] ?string $password,
+        array $options = []
+    ): string {
         $encryption = isset($password) ? 'aes256-cbc' : 'none';
         $comment = $options['comment'] ?? self::$comment;
         $version = $options['version'] ?? self::$version;
@@ -278,13 +290,13 @@ abstract class PuTTY
                     $hash->setKey(sha1('putty-private-key-file-mac-key', true));
             }
         } else {
-            $private .= Random::string(16 - (strlen($private) & 15));
+            $private .= random_bytes(16 - (strlen($private) & 15));
             $source .= Strings::packSSH2('s', $private);
             $crypto = new AES('cbc');
 
             switch ($version) {
                 case 3:
-                    $salt = Random::string(16);
+                    $salt = random_bytes(16);
                     $key .= "Key-Derivation: Argon2id\r\n";
                     $key .= "Argon2-Memory: 8192\r\n";
                     $key .= "Argon2-Passes: 13\r\n";

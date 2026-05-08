@@ -4,16 +4,16 @@
  * RSA Private Key
  *
  * @author    Jim Wigginton <terrafrost@php.net>
- * @copyright 2015 Jim Wigginton
+ * @copyright 2019-2026 Jim Wigginton
  * @license   http://www.opensource.org/licenses/mit-license.html  MIT License
- * @link      http://phpseclib.sourceforge.net
+ * @link      https://phpseclib.com/
  */
 
 declare(strict_types=1);
 
 namespace phpseclib4\Crypt\RSA;
 
-use phpseclib4\Crypt\{Common, RSA, Random};
+use phpseclib4\Crypt\{Common, RSA};
 use phpseclib4\Exception\{BadDecryptionException, KeyConstraintException, LengthException};
 use phpseclib4\File\Common\Signable;
 use phpseclib4\File\CSR;
@@ -191,7 +191,7 @@ final class PrivateKey extends RSA implements Common\PrivateKey
             throw new LengthException('RSA modulus too short');
         }
 
-        $salt = Random::string($sLen);
+        $salt = $sLen ? random_bytes($sLen) : '';
         $m2 = "\0\0\0\0\0\0\0\0" . $mHash . $salt;
         $h = $this->hash->hash($m2);
         $ps = str_repeat(chr(0), $emLen - $sLen - $this->hLen - 2);

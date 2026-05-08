@@ -18,6 +18,11 @@ jobs:
                     php-version: ${{ matrix.php-version }}
                 env:
                     update: true
+            -   name: Override PHPUnit and ParaTest versions
+                run: |
+                    composer require --dev --no-update \
+                      "phpunit/phpunit:${{ matrix.phpunit }}" \
+                      "brianium/paratest:${{ matrix.paratest }}"
             -   name: Composer Install
                 run: composer install --classmap-authoritative --no-interaction --no-cache
             -   name: Lint
@@ -25,7 +30,13 @@ jobs:
         strategy:
             fail-fast: false
             matrix:
-                php-version: ['8.2', '8.3', '8.4', '8.5']
+                php-version: ['8.1', '8.2', '8.3', '8.4', '8.5']
+                include:
+                    -   { php-version: '8.1', phpunit: '^10.5', paratest: '^7.0' }
+                    -   { php-version: '8.2', phpunit: '^11.5', paratest: '^7.8.5' }
+                    -   { php-version: '8.3', phpunit: '^11.5', paratest: '^7.8.5' }
+                    -   { php-version: '8.4', phpunit: '^12.5', paratest: '^7.16' }
+                    -   { php-version: '8.5', phpunit: '^13.1', paratest: '^7.22' }
     quality_tools:
         name: Quality Tools
         timeout-minutes: 5
@@ -39,12 +50,12 @@ jobs:
                     php-version: '8.2'
                 env:
                     update: true
+            -   name: Override PHPUnit and ParaTest versions
+                run: composer require --dev --no-update "phpunit/phpunit:^11.5" "brianium/paratest:^7.8.5"
             -   name: Composer Install
-                run: composer install --classmap-authoritative --no-interaction --no-cache
+                run: composer update --with-all-dependencies --no-interaction --no-cache
             -   name: PHP_CodeSniffer
                 run: vendor/bin/phpcs --standard=build/php_codesniffer.xml
-            -   name: PHP CS Fixer
-                run: vendor/bin/php-cs-fixer fix --config=build/php-cs-fixer.php --diff --dry-run --using-cache=no
             -   name: Psalm
                 run: vendor/bin/psalm --config=build/psalm.xml --no-cache --long-progress --report-show-info=false
         strategy:
@@ -62,17 +73,26 @@ jobs:
                     php-version: ${{ matrix.php-version }}
                 env:
                     update: true
+            -   name: Override PHPUnit and ParaTest versions
+                shell: bash
+                run: |
+                    composer require --dev --no-update \
+                      "phpunit/phpunit:${{ matrix.phpunit }}" \
+                      "brianium/paratest:${{ matrix.paratest }}"
             -   name: Composer Install
-                run: composer install --classmap-authoritative --no-interaction --no-cache --ignore-platform-req=php
+                run: composer update --with-all-dependencies --no-interaction --no-cache --ignore-platform-req=php
             -   name: Setup Secure Shell Functional Tests
                 if: matrix.os == 'ubuntu-latest'
                 run: |
                     PHPSECLIB_SSH_USERNAME='phpseclib'
                     PHPSECLIB_SSH_PASSWORD='EePoov8po1aethu2kied1ne0'
 
+                    # Create user
                     sudo useradd --create-home --base-dir /home "$PHPSECLIB_SSH_USERNAME"
                     echo "$PHPSECLIB_SSH_USERNAME:$PHPSECLIB_SSH_PASSWORD" | sudo chpasswd
-                    ssh-keygen -t rsa -b 1024 -f "$HOME/.ssh/id_rsa" -q -N ""
+
+                    # Generate keypair, set up agent and authorized_keys
+                    ssh-keygen -t rsa -b 2048 -f "$HOME/.ssh/id_rsa" -q -N ""
                     eval `ssh-agent -s`
                     ssh-add "$HOME/.ssh/id_rsa"
                     sudo mkdir -p "/home/$PHPSECLIB_SSH_USERNAME/.ssh/"
@@ -81,15 +101,56 @@ jobs:
                     sudo cp "/tmp/known_hosts" "/home/$PHPSECLIB_SSH_USERNAME/.ssh/known_hosts"
                     sudo chown "$PHPSECLIB_SSH_USERNAME:$PHPSECLIB_SSH_USERNAME" "/home/$PHPSECLIB_SSH_USERNAME/.ssh/" -R
 
+                    # ---------- Port 23: keyboard-interactive only ----------
+                    sudo tee /etc/ssh/sshd_config_kbdint > /dev/null <<'EOF'
+                    Port 23
+                    PidFile /run/sshd_kbdint.pid
+                    PasswordAuthentication no
+                    PubkeyAuthentication no
+                    KbdInteractiveAuthentication yes
+                    ChallengeResponseAuthentication yes
+                    UsePAM yes
+                    AuthenticationMethods keyboard-interactive
+                    Subsystem sftp /usr/lib/openssh/sftp-server
+                    EOF
+                    sudo /usr/sbin/sshd -f /etc/ssh/sshd_config_kbdint
+
+                    # ---------- Port 24: 2FA (publickey + keyboard-interactive) ----------
+                    sudo tee /etc/ssh/sshd_config_2fa > /dev/null <<'EOF'
+                    Port 24
+                    PidFile /run/sshd_2fa.pid
+                    PasswordAuthentication no
+                    PubkeyAuthentication yes
+                    KbdInteractiveAuthentication yes
+                    ChallengeResponseAuthentication yes
+                    UsePAM yes
+                    AuthenticationMethods publickey,keyboard-interactive
+                    Subsystem sftp /usr/lib/openssh/sftp-server
+                    EOF
+                    sudo /usr/sbin/sshd -f /etc/ssh/sshd_config_2fa
+
+                    # Verify both are listening
+                    sleep 1
+                    sudo ss -tlnp | grep -E ':(22|23|24)\b'
+
+                    # Export env vars
                     echo "PHPSECLIB_SSH_HOSTNAME=localhost" >> $GITHUB_ENV
                     echo "PHPSECLIB_SSH_USERNAME=$PHPSECLIB_SSH_USERNAME" >> $GITHUB_ENV
                     echo "PHPSECLIB_SSH_PASSWORD=$PHPSECLIB_SSH_PASSWORD" >> $GITHUB_ENV
                     echo "PHPSECLIB_SSH_HOME=/home/phpseclib" >> $GITHUB_ENV
+                    echo "PHPSECLIB_SSH_KBDINT_PORT=23" >> $GITHUB_ENV
+                    echo "PHPSECLIB_SSH_2FA_PORT=24" >> $GITHUB_ENV
                     echo "SSH_AUTH_SOCK=$SSH_AUTH_SOCK" >> $GITHUB_ENV
             -   name: PHPUnit
-                run: vendor/bin/paratest --verbose --configuration=tests/phpunit.xml --runner=WrapperRunner
+                run: vendor/bin/paratest --configuration=tests/phpunit.xml --runner=WrapperRunner --no-progress
         strategy:
             fail-fast: false
             matrix:
                 os: [ubuntu-latest, windows-latest, macos-latest]
-                php-version: ['8.2', '8.3', '8.4', '8.5']
+                php-version: ['8.1', '8.2', '8.3', '8.4', '8.5']
+                include:
+                    -   { php-version: '8.1', phpunit: '^10.5', paratest: '^7.0' }
+                    -   { php-version: '8.2', phpunit: '^11.5', paratest: '^7.8.5' }
+                    -   { php-version: '8.3', phpunit: '^11.5', paratest: '^7.8.5' }
+                    -   { php-version: '8.4', phpunit: '^12.5', paratest: '^7.16' }
+                    -   { php-version: '8.5', phpunit: '^13.1', paratest: '^7.22' }

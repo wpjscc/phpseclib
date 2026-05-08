@@ -8,9 +8,9 @@
  * Encode and decode CMS / EnvelopedData / KeyAgreeRecipient files.
  *
  * @author    Jim Wigginton <terrafrost@php.net>
- * @copyright 2022 Jim Wigginton
+ * @copyright 2026 Jim Wigginton
  * @license   http://www.opensource.org/licenses/mit-license.html  MIT License
- * @link      http://phpseclib.sourceforge.net
+ * @link      https://phpseclib.com/
  */
 
 declare(strict_types=1);
@@ -27,8 +27,8 @@ class KeyAgreeRecipient extends Recipient
         //ASN1::disableCacheInvalidation();
         $decoded = ASN1::decodeBER($encoded);
         $rules = [];
-        $rules['keyEncryptionAlgorithm'] = [self::class, 'mapInAlgoParams'];
-        $rules['recipientEncryptedKeys'] = [self::class, 'mapInEncryptedKeys'];
+        $rules['keyEncryptionAlgorithm'] = self::mapInAlgoParams(...);
+        $rules['recipientEncryptedKeys'] = self::mapInEncryptedKeys(...);
         $recipient = ASN1::map($decoded, Maps\KeyAgreeRecipientInfo::MAP, $rules);
         //ASN1::enableCacheInvalidation();
         return $recipient;

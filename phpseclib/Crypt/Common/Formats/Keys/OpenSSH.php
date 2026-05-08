@@ -3,14 +3,14 @@
 /**
  * OpenSSH Key Handler
  *
- * PHP version 5
+ * PHP version 8.1+
  *
  * Place in $HOME/.ssh/authorized_keys
  *
  * @author    Jim Wigginton <terrafrost@php.net>
- * @copyright 2015 Jim Wigginton
+ * @copyright 2016-2026 Jim Wigginton
  * @license   http://www.opensource.org/licenses/mit-license.html  MIT License
- * @link      http://phpseclib.sourceforge.net
+ * @link      https://phpseclib.com/
  */
 
 declare(strict_types=1);
@@ -18,7 +18,7 @@ declare(strict_types=1);
 namespace phpseclib4\Crypt\Common\Formats\Keys;
 
 use phpseclib4\Common\Functions\Strings;
-use phpseclib4\Crypt\{AES, Random};
+use phpseclib4\Crypt\AES;
 use phpseclib4\Exception\{
     BadDecryptionException,
     PasswordNeededException,
@@ -57,8 +57,10 @@ abstract class OpenSSH
      *
      * $type can be either ssh-dss or ssh-rsa
      */
-    public static function load(string $key, #[SensitiveParameter] ?string $password = null): array
-    {
+    public static function load(
+        #[SensitiveParameter] string $key,
+        #[SensitiveParameter] ?string $password = null
+    ): array {
         // key format is described here:
         // https://cvsweb.openbsd.org/cgi-bin/cvsweb/src/usr.bin/ssh/PROTOCOL.key?annotate=HEAD
 
@@ -165,9 +167,13 @@ abstract class OpenSSH
     /**
      * Wrap a private key appropriately
      */
-    protected static function wrapPrivateKey(string $publicKey, string $privateKey, #[SensitiveParameter] ?string $password, array $options): string
-    {
-        [, $checkint] = unpack('N', Random::string(4));
+    protected static function wrapPrivateKey(
+        string $publicKey,
+        #[SensitiveParameter] string $privateKey,
+        #[SensitiveParameter] ?string $password,
+        array $options
+    ): string {
+        [, $checkint] = unpack('N', random_bytes(4));
 
         $comment = $options['comment'] ?? self::$comment;
         $paddedKey = Strings::packSSH2('NN', $checkint, $checkint) .
@@ -192,7 +198,7 @@ abstract class OpenSSH
             $key = Strings::packSSH2('sssNss', 'none', 'none', '', 1, $publicKey, $paddedKey);
         } else {
             $rounds = $options['rounds'] ?? 16;
-            $salt = Random::string(16);
+            $salt = random_bytes(16);
             $kdfoptions = Strings::packSSH2('sN', $salt, $rounds);
             $crypto = new AES('ctr');
             $crypto->setPassword($password, 'bcrypt', $salt, $rounds, 32);

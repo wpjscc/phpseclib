@@ -17,9 +17,9 @@
  * the certificate all together unless the certificate is re-signed.
  *
  * @author    Jim Wigginton <terrafrost@php.net>
- * @copyright 2022 Jim Wigginton
+ * @copyright 2012-2026 Jim Wigginton
  * @license   http://www.opensource.org/licenses/mit-license.html  MIT License
- * @link      http://phpseclib.sourceforge.net
+ * @link      https://phpseclib.com/
  */
 
 declare(strict_types=1);
@@ -28,7 +28,7 @@ namespace phpseclib4\File;
 
 use phpseclib4\Common\Functions\{Arrays, Strings};
 use phpseclib4\Crypt\Common\PublicKey;
-use phpseclib4\Crypt\{Hash, PublicKeyLoader, RSA, Random};
+use phpseclib4\Crypt\{Hash, PublicKeyLoader, RSA};
 use phpseclib4\Exception\{
     BadMethodCallException,
     InvalidArgumentException,
@@ -51,6 +51,43 @@ class X509 implements \ArrayAccess, \Countable, \Iterator, Signable
     use \phpseclib4\File\Common\Traits\Extension;
     use \phpseclib4\File\Common\Traits\DN;
     use \phpseclib4\File\Common\Traits\ASN1Signature;
+
+    /**
+     * Return internal array representation
+     *
+     * @see \phpseclib4\File\X509::getDN()
+     */
+    public const DN_ARRAY = 0;
+    /**
+     * Return string
+     *
+     * @see \phpseclib4\File\X509::getDN()
+     */
+    public const DN_STRING = 1;
+    /**
+     * Return ASN.1 name string
+     *
+     * @see \phpseclib4\File\X509::getDN()
+     */
+    public const DN_ASN1 = 2;
+    /**
+     * Return OpenSSL compatible array
+     *
+     * @see \phpseclib4\File\X509::getDN()
+     */
+    public const DN_OPENSSL = 3;
+    /**
+     * Return canonical ASN.1 RDNs string
+     *
+     * @see \phpseclib4\File\X509::getDN()
+     */
+    public const DN_CANON = 4;
+    /**
+     * Return name hash for file indexing
+     *
+     * @see \phpseclib4\File\X509::getDN()
+     */
+    public const DN_HASH = 5;
 
     private Constructed|array $cert;
     private static bool $strictDNComparison = true;
@@ -111,7 +148,7 @@ class X509 implements \ArrayAccess, \Countable, \Iterator, Signable
           for the integer to be positive the leading bit needs to be 0 hence the
           application of a bitmap
         */
-        $serialNumber = new BigInteger(Random::string(20) & ("\x7F" . str_repeat("\xFF", 19)), 256);
+        $serialNumber = new BigInteger(random_bytes(20) & ("\x7F" . str_repeat("\xFF", 19)), 256);
 
         $this->cert = [
             'tbsCertificate' => [
@@ -265,9 +302,9 @@ class X509 implements \ArrayAccess, \Countable, \Iterator, Signable
         $decoded = ASN1::decodeBER($cert);
 
         $rules = [];
-        $rules['tbsCertificate']['extensions']['*'] = [self::class, 'mapInExtensions'];
-        $rules['tbsCertificate']['subject']['rdnSequence']['*']['*'] = [self::class, 'mapInDNs'];
-        $rules['tbsCertificate']['issuer']['rdnSequence']['*']['*'] = [self::class, 'mapInDNs'];
+        $rules['tbsCertificate']['extensions']['*'] = self::mapInExtensions(...);
+        $rules['tbsCertificate']['subject']['rdnSequence']['*']['*'] = self::mapInDNs(...);
+        $rules['tbsCertificate']['issuer']['rdnSequence']['*']['*'] = self::mapInDNs(...);
         $rules['tbsCertificate']['subjectPublicKeyInfo'] = function (Constructed &$key) {
             try {
                 $key = PublicKeyLoader::load($key->getEncoded());

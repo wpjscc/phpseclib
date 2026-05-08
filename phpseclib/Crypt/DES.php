@@ -5,7 +5,7 @@
  *
  * Uses OpenSSL, if available/possible, and an internal implementation, otherwise
  *
- * PHP version 5
+ * PHP version 8.1+
  *
  * Useful resources are as follows:
  *
@@ -33,9 +33,9 @@
  * </code>
  *
  * @author    Jim Wigginton <terrafrost@php.net>
- * @copyright 2007 Jim Wigginton
+ * @copyright 2007-2026 Jim Wigginton
  * @license   http://www.opensource.org/licenses/mit-license.html  MIT License
- * @link      http://phpseclib.sourceforge.net
+ * @link      https://phpseclib.com/
  */
 
 declare(strict_types=1);
@@ -579,7 +579,7 @@ class DES extends BlockCipher
      *
      * @see Common\SymmetricKey::setKey()
      */
-    public function setKey(string $key): void
+    public function setKey(#[SensitiveParameter] string $key): void
     {
         if (!($this instanceof TripleDES) && strlen($key) != 8) {
             throw new LengthException('Key of size ' . strlen($key) . ' not supported by this algorithm. Only keys of size 8 are supported');
@@ -627,14 +627,14 @@ class DES extends BlockCipher
     {
         static $sbox1, $sbox2, $sbox3, $sbox4, $sbox5, $sbox6, $sbox7, $sbox8, $shuffleip, $shuffleinvip;
         if (!$sbox1) {
-            $sbox1 = array_map([self::class, 'safe_intval'], self::$sbox1);
-            $sbox2 = array_map([self::class, 'safe_intval'], self::$sbox2);
-            $sbox3 = array_map([self::class, 'safe_intval'], self::$sbox3);
-            $sbox4 = array_map([self::class, 'safe_intval'], self::$sbox4);
-            $sbox5 = array_map([self::class, 'safe_intval'], self::$sbox5);
-            $sbox6 = array_map([self::class, 'safe_intval'], self::$sbox6);
-            $sbox7 = array_map([self::class, 'safe_intval'], self::$sbox7);
-            $sbox8 = array_map([self::class, 'safe_intval'], self::$sbox8);
+            $sbox1 = array_map(self::safe_intval(...), self::$sbox1);
+            $sbox2 = array_map(self::safe_intval(...), self::$sbox2);
+            $sbox3 = array_map(self::safe_intval(...), self::$sbox3);
+            $sbox4 = array_map(self::safe_intval(...), self::$sbox4);
+            $sbox5 = array_map(self::safe_intval(...), self::$sbox5);
+            $sbox6 = array_map(self::safe_intval(...), self::$sbox6);
+            $sbox7 = array_map(self::safe_intval(...), self::$sbox7);
+            $sbox8 = array_map(self::safe_intval(...), self::$sbox8);
             /* Merge $shuffle with $[inv]ipmap */
             for ($i = 0; $i < 256; ++$i) {
                 $shuffleip[]    =  self::$shuffle[self::$ipmap[$i]];
@@ -1246,14 +1246,14 @@ class DES extends BlockCipher
 
         $init_crypt = 'static $sbox1, $sbox2, $sbox3, $sbox4, $sbox5, $sbox6, $sbox7, $sbox8, $shuffleip, $shuffleinvip;
             if (!$sbox1) {
-                $sbox1 = array_map([self::class, "safe_intval"], self::$sbox1);
-                $sbox2 = array_map([self::class, "safe_intval"], self::$sbox2);
-                $sbox3 = array_map([self::class, "safe_intval"], self::$sbox3);
-                $sbox4 = array_map([self::class, "safe_intval"], self::$sbox4);
-                $sbox5 = array_map([self::class, "safe_intval"], self::$sbox5);
-                $sbox6 = array_map([self::class, "safe_intval"], self::$sbox6);
-                $sbox7 = array_map([self::class, "safe_intval"], self::$sbox7);
-                $sbox8 = array_map([self::class, "safe_intval"], self::$sbox8);'
+                $sbox1 = array_map(self::safe_intval(...), self::$sbox1);
+                $sbox2 = array_map(self::safe_intval(...), self::$sbox2);
+                $sbox3 = array_map(self::safe_intval(...), self::$sbox3);
+                $sbox4 = array_map(self::safe_intval(...), self::$sbox4);
+                $sbox5 = array_map(self::safe_intval(...), self::$sbox5);
+                $sbox6 = array_map(self::safe_intval(...), self::$sbox6);
+                $sbox7 = array_map(self::safe_intval(...), self::$sbox7);
+                $sbox8 = array_map(self::safe_intval(...), self::$sbox8);'
                 /* Merge $shuffle with $[inv]ipmap */ . '
                 for ($i = 0; $i < 256; ++$i) {
                     $shuffleip[]    =  self::$shuffle[self::$ipmap[$i]];

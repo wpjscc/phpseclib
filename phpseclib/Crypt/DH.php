@@ -3,7 +3,7 @@
 /**
  * Pure-PHP (EC)DH implementation
  *
- * PHP version 5
+ * PHP version 8.1+
  *
  * Here's an example of how to compute a shared secret with this library:
  * <code>
@@ -17,9 +17,9 @@
  * </code>
  *
  * @author    Jim Wigginton <terrafrost@php.net>
- * @copyright 2016 Jim Wigginton
+ * @copyright 2019-2026 Jim Wigginton
  * @license   http://www.opensource.org/licenses/mit-license.html  MIT License
- * @link      http://phpseclib.sourceforge.net
+ * @link      https://phpseclib.com/
  */
 
 declare(strict_types=1);
@@ -258,8 +258,10 @@ abstract class DH extends AsymmetricKey
     /**
      * Compute Shared Secret
      */
-    public static function computeSecret(PrivateKey|EC\PrivateKey|string $private, PublicKey|EC\PublicKey|BigInteger|string $public): BigInteger|string
-    {
+    public static function computeSecret(
+        #[SensitiveParameter] PrivateKey|EC\PrivateKey|string $private,
+        PublicKey|EC\PublicKey|BigInteger|string $public
+    ): BigInteger|string {
         if ($private instanceof PrivateKey) { // DH\PrivateKey
             switch (true) {
                 case $public instanceof PublicKey:
@@ -340,8 +342,10 @@ abstract class DH extends AsymmetricKey
     /**
      * Load the key
      */
-    public static function load(string|array $key, #[SensitiveParameter] ?string $password = null): AsymmetricKey
-    {
+    public static function load(
+        #[SensitiveParameter] string|array $key,
+        #[SensitiveParameter] ?string $password = null
+    ): AsymmetricKey {
         try {
             return EC::load($key, $password);
         } catch (NoKeyLoadedException $e) {

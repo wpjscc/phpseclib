@@ -2,7 +2,7 @@
 
 /**
  * @author    Andreas Fischer <bantu@phpbb.com>
- * @copyright 2014 Andreas Fischer
+ * @copyright 2014-2026 Andreas Fischer
  * @license   http://www.opensource.org/licenses/mit-license.html  MIT License
  */
 
@@ -39,9 +39,7 @@ class SSH2AgentTest extends PhpseclibFunctionalTestCase
         return ['ssh' => $ssh, 'ssh-agent' => $agent];
     }
 
-    /**
-     * @depends testAgentLogin
-     */
+    #[\PHPUnit\Framework\Attributes\Depends('testAgentLogin')]
     public function testAgentForward($args)
     {
         $ssh = $args['ssh'];

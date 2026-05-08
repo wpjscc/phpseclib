@@ -3,7 +3,7 @@
 /**
  * Pure-PHP implementation of EC.
  *
- * PHP version 5
+ * PHP version 8.1+
  *
  * Here's an example of how to create signatures and verify signatures with this library:
  * <code>
@@ -22,9 +22,9 @@
  * </code>
  *
  * @author    Jim Wigginton <terrafrost@php.net>
- * @copyright 2016 Jim Wigginton
+ * @copyright 2018-2026 Jim Wigginton
  * @license   http://www.opensource.org/licenses/mit-license.html  MIT License
- * @link      http://phpseclib.sourceforge.net
+ * @link      https://phpseclib.com/
  */
 
 declare(strict_types=1);
@@ -185,7 +185,7 @@ abstract class EC extends AsymmetricKey
 
         $curve = new $curve();
         if ($curve instanceof TwistedEdwardsCurve) {
-            $arr = $curve->extractSecret(Random::string($curve instanceof Ed448 ? 57 : 32));
+            $arr = $curve->extractSecret(random_bytes($curve instanceof Ed448 ? 57 : 32));
             $privatekey->dA = $dA = $arr['dA'];
             $privatekey->secret = $arr['secret'];
         } else {
@@ -424,8 +424,11 @@ abstract class EC extends AsymmetricKey
     // for Weierstrass curves, if only the x coordinate is present (as is the case after doing a round of ECDH)
     // then we'll guess at the y coordinate. there are only two possible y values and, atleast in-so-far as
     // multiplication is concerned, neither value affects the resultant x value
-    public static function convertPointToPublicKey(string $curveName, string $secret, bool $toPublicKey = true): PublicKey|string
-    {
+    public static function convertPointToPublicKey(
+        string $curveName,
+        #[SensitiveParameter] string $secret,
+        bool $toPublicKey = true
+    ): PublicKey|string {
         $curveName = self::getCurveCase($curveName);
         $curve = '\phpseclib4\Crypt\EC\Curves\\' . $curveName;
 

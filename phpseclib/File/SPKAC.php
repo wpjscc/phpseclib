@@ -8,9 +8,9 @@
  * Encode and decode SPKACs.
  *
  * @author    Jim Wigginton <terrafrost@php.net>
- * @copyright 2022 Jim Wigginton
+ * @copyright 2025-2026 Jim Wigginton
  * @license   http://www.opensource.org/licenses/mit-license.html  MIT License
- * @link      http://phpseclib.sourceforge.net
+ * @link      https://phpseclib.com/
  */
 
 declare(strict_types=1);
@@ -44,7 +44,7 @@ class SPKAC implements \ArrayAccess, \Countable, \Iterator, Signable
             // "A challenge string that is submitted along with the public key. Defaults to an empty string if not specified."
             // both Firefox and OpenSSL ("openssl spkac -key private.key") behave this way
             // we could alternatively do this instead if we ignored the specs:
-            // Random::string(8) & str_repeat("\x7F", 8)
+            // random_bytes(8) & str_repeat("\x7F", 8)
             'challenge' => '',
         ],
         'signatureAlgorithm' => [

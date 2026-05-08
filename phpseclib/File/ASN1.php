@@ -3,7 +3,7 @@
 /**
  * Pure-PHP ASN.1 Parser
  *
- * PHP version 5
+ * PHP version 8.1+
  *
  * ASN.1 provides the semantics for data encoded using various schemes.  The most commonly
  * utilized scheme is DER or the "Distinguished Encoding Rules".  PEM's are base64 encoded
@@ -14,9 +14,9 @@
  * Uses the 1988 ASN.1 syntax.
  *
  * @author    Jim Wigginton <terrafrost@php.net>
- * @copyright 2012 Jim Wigginton
+ * @copyright 2012-2026 Jim Wigginton
  * @license   http://www.opensource.org/licenses/mit-license.html  MIT License
- * @link      http://phpseclib.sourceforge.net
+ * @link      https://phpseclib.com/
  */
 
 declare(strict_types=1);
@@ -467,13 +467,20 @@ abstract class ASN1
                 break;
             case self::TYPE_OBJECT_IDENTIFIER:
                 try {
-                    $current['content'] = self::decodeOID($content);
+                    if (strlen($content) > 128) {
+                        throw new ResourceLimitException('Object Identifier size is limited to 128 bytes');
+                    }
+                    if (ord($content[-1]) & 0x80) {
+                        throw new UnexpectedValueException('OID is malformed');
+                    }
                 } catch (\Exception $e) {
                     if (!self::$blobsOnBadDecodes) {
                         throw $e;
                     }
                     $current['content'] = new MalformedData($headercontent . $content);
+                    break;
                 }
+                $current['content'] = new OID(new Element($content));
                 break;
             /* Each character string type shall be encoded as if it had been declared:
                [UNIVERSAL x] IMPLICIT OCTET STRING
@@ -564,6 +571,10 @@ abstract class ASN1
         //if (isset($mapping['decoder'])) {
         //    return $mapping['decoder']($decoded['content']);
         //}
+
+        if ($decoded['content'] instanceof OID) {
+            "$decoded[content]"; // force the OID to be decoded
+        }
 
         if (isset($mapping['explicit'])) {
             if (!$decoded['content'] instanceof Constructed) {
@@ -865,7 +876,7 @@ abstract class ASN1
                                     $subtag = (chr(0x80 | $subtagvalue)) . $subtag;
                                     $constant = $constant >> 7;
                                 }
-                                $subtag[strlen($subtag) - 1] = $subtag[strlen($subtag) - 1] & chr(0x7F);
+                                $subtag[-1] = $subtag[-1] & chr(0x7F);
                                 $subtag = chr((self::CLASS_CONTEXT_SPECIFIC << 6) | 0x20 | 0x1F) . $subtag;
                             }
                             $temp = $subtag . self::encodeLength(strlen($temp)) . $temp;
@@ -875,7 +886,6 @@ abstract class ASN1
                         }
                     }
                     $value .= $temp;
-
                 }
 
                 break;
@@ -1136,11 +1146,11 @@ abstract class ASN1
         $len = strlen($content);
 
         // see https://github.com/openjdk/jdk/blob/2deb318c9f047ec5a4b160d66a4b52f93688ec42/src/java.base/share/classes/sun/security/util/ObjectIdentifier.java#L55
-        if ($len > 4096) {
-            throw new ResourceLimitException('Object Identifier size is limited to 4096 bytes');
+        if ($len > 128) {
+            throw new ResourceLimitException('Object Identifier size is limited to 128 bytes');
         }
 
-        if (ord($content[$len - 1]) & 0x80) {
+        if (ord($content[-1]) & 0x80) {
             throw new UnexpectedValueException('OID is malformed');
         }
 

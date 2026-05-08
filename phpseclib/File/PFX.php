@@ -10,9 +10,9 @@
  * Encode and decode PFX files.
  *
  * @author    Jim Wigginton <terrafrost@php.net>
- * @copyright 2022 Jim Wigginton
+ * @copyright 2025-2026 Jim Wigginton
  * @license   http://www.opensource.org/licenses/mit-license.html  MIT License
- * @link      http://phpseclib.sourceforge.net
+ * @link      https://phpseclib.com/
  */
 
 declare(strict_types=1);
@@ -20,7 +20,7 @@ declare(strict_types=1);
 namespace phpseclib4\File;
 
 use phpseclib4\Crypt\Common\PrivateKey;
-use phpseclib4\Crypt\{Hash, PublicKeyLoader, Random};
+use phpseclib4\Crypt\{Hash, PublicKeyLoader};
 use phpseclib4\Exception\{
     InvalidArgumentException,
     PasswordNeededException,
@@ -68,16 +68,20 @@ class PFX implements \ArrayAccess, \Countable, \Iterator
         ASN1::loadOIDs('PFX');
     }
 
-    public static function load(string|array|Constructed $pfx, ?string $password = null): self
-    {
+    public static function load(
+        #[SensitiveParameter] string|array|Constructed $pfx,
+        #[SensitiveParameter] ?string $password = null
+    ): self {
         $temp = new self();
         $temp->pfx = is_string($pfx) ? self::loadString($pfx, $password) : $pfx;
         $temp->password = $password;
         return $temp;
     }
 
-    private static function loadString(string $pfx, ?string $password): Constructed
-    {
+    private static function loadString(
+        #[SensitiveParameter] string $pfx,
+        #[SensitiveParameter] ?string $password
+    ): Constructed {
         ASN1::disableCacheInvalidation();
 
         $decoded = ASN1::decodeBER($pfx);
@@ -176,7 +180,7 @@ class PFX implements \ArrayAccess, \Countable, \Iterator
 
     // PrivateKey objects are designed to be immutable hence their use of withPassword()
     // PFX is *not* designed to be immutable
-    public function setPassword(?string $password = null): void
+    public function setPassword(#[SensitiveParameter] ?string $password = null): void
     {
         if (!isset($password)) {
             $this->removePassword();
@@ -298,7 +302,7 @@ class PFX implements \ArrayAccess, \Countable, \Iterator
      * @var string|BaseString|string[]|BaseString[]|null $localKeyID
      */
     public function add(
-        X509|PrivateKey $obj,
+        #[SensitiveParameter] X509|PrivateKey $obj,
         string|BaseString|array|null $friendlyName = null,
         string|BaseString|array|null $localKeyID = null
     ): void {
@@ -427,7 +431,7 @@ class PFX implements \ArrayAccess, \Countable, \Iterator
         $saltLength = $options['saltLength'] ?? self::$defaultSaltLength;
         $iterationCount = $options['iterationCount'] ?? self::$defaultIterationCount;
         if ($hashAlgorithm && $this->password) {
-            $salt = Random::string($saltLength);
+            $salt = random_bytes($saltLength);
             $hash = new Hash($hashAlgorithm);
             $hash->setPassword($this->password, $salt, $iterationCount);
             $mac = $hash->hash($this->pfx['authSafe']['content']->value);

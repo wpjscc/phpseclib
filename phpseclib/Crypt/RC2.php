@@ -5,7 +5,7 @@
  *
  * Uses OpenSSL, if available/possible, and an internal implementation, otherwise
  *
- * PHP version 5
+ * PHP version 8.1+
  *
  * Useful resources are as follows:
  *
@@ -28,7 +28,7 @@
  *
  * @author   Patrick Monnerat <pm@datasphere.ch>
  * @license  http://www.opensource.org/licenses/mit-license.html  MIT License
- * @link     http://phpseclib.sourceforge.net
+ * @link     https://phpseclib.com/
  */
 
 declare(strict_types=1);
@@ -277,7 +277,7 @@ class RC2 extends BlockCipher
      * @throws LengthException if the key length isn't supported
      * @see Common\SymmetricKey::setKey()
      */
-    public function setKey(string $key, ?int $t1 = null): void
+    public function setKey(#[SensitiveParameter] string $key, ?int $t1 = null): void
     {
         $this->orig_key = $key;
 
@@ -335,7 +335,7 @@ class RC2 extends BlockCipher
      *
      * @see self::decrypt()
      */
-    public function encrypt(string $plaintext): string
+    public function encrypt(#[SensitiveParameter] string $plaintext): string
     {
         if ($this->engine == self::ENGINE_OPENSSL) {
             $temp = $this->key;

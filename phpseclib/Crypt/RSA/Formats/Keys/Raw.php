@@ -3,7 +3,7 @@
 /**
  * Raw RSA Key Handler
  *
- * PHP version 5
+ * PHP version 8.1+
  *
  * An array containing two \phpseclib4\Math\BigInteger objects.
  *
@@ -16,9 +16,9 @@
  * 1, n, modulo, modulus
  *
  * @author    Jim Wigginton <terrafrost@php.net>
- * @copyright 2015 Jim Wigginton
+ * @copyright 2015-2026 Jim Wigginton
  * @license   http://www.opensource.org/licenses/mit-license.html  MIT License
- * @link      http://phpseclib.sourceforge.net
+ * @link      https://phpseclib.com/
  */
 
 declare(strict_types=1);
@@ -38,8 +38,10 @@ abstract class Raw
     /**
      * Break a public or private key down into its constituent components
      */
-    public static function load(array $key, #[SensitiveParameter] ?string $password = null): array
-    {
+    public static function load(
+        #[SensitiveParameter] array $key,
+        #[SensitiveParameter] ?string $password = null
+    ): array {
         $key = array_change_key_case($key, CASE_LOWER);
 
         $components = ['isPublicKey' => false];

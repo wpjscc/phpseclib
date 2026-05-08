@@ -3,7 +3,7 @@
 /**
  * PKCS#1 Formatted RSA Key Handler
  *
- * PHP version 5
+ * PHP version 8.1+
  *
  * Used by File/X509.php
  *
@@ -15,9 +15,9 @@
  * Analogous to ssh-keygen's pem format (as specified by -m)
  *
  * @author    Jim Wigginton <terrafrost@php.net>
- * @copyright 2015 Jim Wigginton
+ * @copyright 2015-2026 Jim Wigginton
  * @license   http://www.opensource.org/licenses/mit-license.html  MIT License
- * @link      http://phpseclib.sourceforge.net
+ * @link      https://phpseclib.com/
  */
 
 declare(strict_types=1);
@@ -39,8 +39,10 @@ abstract class PKCS1 extends Progenitor
     /**
      * Break a public or private key down into its constituent components
      */
-    public static function load(string $key, #[SensitiveParameter] ?string $password = null): array
-    {
+    public static function load(
+        #[SensitiveParameter] string $key,
+        #[SensitiveParameter] ?string $password = null
+    ): array {
         $components = match (true) {
             str_contains($key, 'PUBLIC') => ['isPublicKey' => true],
             str_contains($key, 'PRIVATE') => ['isPrivateKey' => false],
@@ -104,8 +106,16 @@ abstract class PKCS1 extends Progenitor
     /**
      * Convert a private key to the appropriate format.
      */
-    public static function savePrivateKey(BigInteger $n, BigInteger $e, BigInteger $d, array $primes, array $exponents, array $coefficients, #[SensitiveParameter] ?string $password = null, array $options = []): string
-    {
+    public static function savePrivateKey(
+        BigInteger $n,
+        BigInteger $e,
+        #[SensitiveParameter] BigInteger $d,
+        #[SensitiveParameter] array $primes,
+        #[SensitiveParameter] array $exponents,
+        #[SensitiveParameter] array $coefficients,
+        #[SensitiveParameter] ?string $password = null,
+        array $options = []
+    ): string {
         $num_primes = count($primes);
         $key = [
             'version' => $num_primes == 2 ? 'two-prime' : 'multi',

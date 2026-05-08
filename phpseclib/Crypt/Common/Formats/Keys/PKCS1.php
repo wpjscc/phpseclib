@@ -3,12 +3,12 @@
 /**
  * PKCS1 Formatted Key Handler
  *
- * PHP version 5
+ * PHP version 8.1+
  *
  * @author    Jim Wigginton <terrafrost@php.net>
- * @copyright 2015 Jim Wigginton
+ * @copyright 2016-2026 Jim Wigginton
  * @license   http://www.opensource.org/licenses/mit-license.html  MIT License
- * @link      http://phpseclib.sourceforge.net
+ * @link      https://phpseclib.com/
  */
 
 declare(strict_types=1);
@@ -16,7 +16,7 @@ declare(strict_types=1);
 namespace phpseclib4\Crypt\Common\Formats\Keys;
 
 use phpseclib4\Common\Functions\Strings;
-use phpseclib4\Crypt\{AES, DES, Random, TripleDES};
+use phpseclib4\Crypt\{AES, DES, TripleDES};
 use phpseclib4\Exception\{
     PasswordNeededException,
     UnsupportedAlgorithmException,
@@ -83,8 +83,11 @@ abstract class PKCS1 extends PKCS
     /**
      * Generate a symmetric key for PKCS#1 keys
      */
-    private static function generateSymmetricKey(#[SensitiveParameter] string $password, string $iv, int $length): string
-    {
+    private static function generateSymmetricKey(
+        #[SensitiveParameter] string $password,
+        string $iv,
+        int $length
+    ): string {
         $symkey = '';
         $iv = substr($iv, 0, 8);
         while (strlen($symkey) < $length) {
@@ -96,8 +99,10 @@ abstract class PKCS1 extends PKCS
     /**
      * Break a public or private key down into its constituent components
      */
-    protected static function loadHelper(string $key, #[SensitiveParameter] ?string $password = null): string
-    {
+    protected static function loadHelper(
+        #[SensitiveParameter] string $key,
+        #[SensitiveParameter] ?string $password = null
+    ): string {
         /* Although PKCS#1 proposes a format that public and private keys can use, encrypting them is
            "outside the scope" of PKCS#1.  PKCS#1 then refers you to PKCS#12 and PKCS#15 if you're wanting to
            protect private keys, however, that's not what OpenSSL* does.  OpenSSL protects private keys by adding
@@ -148,8 +153,12 @@ abstract class PKCS1 extends PKCS
     /**
      * Wrap a private key appropriately
      */
-    protected static function wrapPrivateKey(string $key, string $type, #[SensitiveParameter] ?string $password, array $options = []): string
-    {
+    protected static function wrapPrivateKey(
+        #[SensitiveParameter] string $key,
+        string $type,
+        #[SensitiveParameter] ?string $password,
+        array $options = []
+    ): string {
         if (!isset($password)) {
             return "-----BEGIN $type PRIVATE KEY-----\r\n" .
                    chunk_split(Strings::base64_encode($key), 64) .
@@ -159,7 +168,7 @@ abstract class PKCS1 extends PKCS
         $encryptionAlgorithm = $options['encryptionAlgorithm'] ?? self::$defaultEncryptionAlgorithm;
 
         $cipher = self::getEncryptionObject($encryptionAlgorithm);
-        $iv = Random::string($cipher->getBlockLength() >> 3);
+        $iv = random_bytes($cipher->getBlockLength() >> 3);
         $cipher->setKey(self::generateSymmetricKey($password, $iv, $cipher->getKeyLength() >> 3));
         $cipher->setIV($iv);
         $iv = strtoupper(Strings::bin2hex($iv));

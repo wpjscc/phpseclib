@@ -3,7 +3,7 @@
 /**
  * Base Class for all \phpseclib4\Crypt\* cipher classes
  *
- * PHP version 5
+ * PHP version 8.1+
  *
  * Internally for phpseclib developers:
  *  If you plan to add a new cipher class, please note following rules:
@@ -27,9 +27,9 @@
  *
  * @author    Jim Wigginton <terrafrost@php.net>
  * @author    Hans-Juergen Petrich <petrich@tronic-media.com>
- * @copyright 2007 Jim Wigginton
+ * @copyright 2013-2026 Jim Wigginton
  * @license   http://www.opensource.org/licenses/mit-license.html  MIT License
- * @link      http://phpseclib.sourceforge.net
+ * @link      https://phpseclib.com/
  */
 
 declare(strict_types=1);
@@ -177,7 +177,7 @@ abstract class SymmetricKey
      *
      * @see \phpseclib4\Crypt\Common\SymmetricKey::__construct()
      */
-    public const ENGINE_OPENSSL_GCM = 6;
+    public const ENGINE_OPENSSL_AEAD = 6;
 
     /**
      * Engine Reverse Map
@@ -185,11 +185,11 @@ abstract class SymmetricKey
      * @see \phpseclib4\Crypt\Common\SymmetricKey::getEngine()
      */
     public const ENGINE_MAP = [
-        self::ENGINE_INTERNAL    => 'PHP',
-        self::ENGINE_EVAL        => 'Eval',
-        self::ENGINE_OPENSSL     => 'OpenSSL',
-        self::ENGINE_LIBSODIUM   => 'libsodium',
-        self::ENGINE_OPENSSL_GCM => 'OpenSSL (GCM)',
+        self::ENGINE_INTERNAL     => 'PHP',
+        self::ENGINE_EVAL         => 'Eval',
+        self::ENGINE_OPENSSL      => 'OpenSSL',
+        self::ENGINE_LIBSODIUM    => 'libsodium',
+        self::ENGINE_OPENSSL_AEAD => 'OpenSSL (AEAD)',
     ];
 
     /**
@@ -299,11 +299,11 @@ abstract class SymmetricKey
      * which will be determined automatically on __construct()
      *
      * Currently available $engines are:
-     * - self::ENGINE_LIBSODIUM   (very fast, php-extension: libsodium, extension_loaded('libsodium') required)
-     * - self::ENGINE_OPENSSL_GCM (very fast, php-extension: openssl, extension_loaded('openssl') required)
-     * - self::ENGINE_OPENSSL     (very fast, php-extension: openssl, extension_loaded('openssl') required)
-     * - self::ENGINE_EVAL        (medium, pure php-engine, no php-extension required)
-     * - self::ENGINE_INTERNAL    (slower, pure php-engine, no php-extension required)
+     * - self::ENGINE_LIBSODIUM    (very fast, php-extension: libsodium, extension_loaded('libsodium') required)
+     * - self::ENGINE_OPENSSL_AEAD (very fast, php-extension: openssl, extension_loaded('openssl') required)
+     * - self::ENGINE_OPENSSL      (very fast, php-extension: openssl, extension_loaded('openssl') required)
+     * - self::ENGINE_EVAL         (medium, pure php-engine, no php-extension required)
+     * - self::ENGINE_INTERNAL     (slower, pure php-engine, no php-extension required)
      *
      * @see self::setEngine()
      * @see self::encrypt()
@@ -576,7 +576,7 @@ abstract class SymmetricKey
      * Once enabled Poly1305 cannot be disabled. If $key is not passed then an attempt to call createPoly1305Key
      * will be made.
      */
-    public function setPoly1305Key(?string $key = null): void
+    public function setPoly1305Key(#[SensitiveParameter] ?string $key = null): void
     {
         if ($this->mode == self::MODE_GCM) {
             throw new BadMethodCallException('Poly1305 cannot be used in GCM mode');
@@ -698,7 +698,7 @@ abstract class SymmetricKey
      *
      * {@internal Could, but not must, extend by the child Crypt_* class}
      */
-    public function setKey(string $key): void
+    public function setKey(#[SensitiveParameter] string $key): void
     {
         if (isset($this->explicit_key_length) && strlen($key) != $this->explicit_key_length) {
             throw new LengthException('Key length has already been set to ' . $this->explicit_key_length . ' bytes and this key is ' . strlen($key) . ' bytes');
@@ -726,8 +726,11 @@ abstract class SymmetricKey
      *
      * @see Crypt/Hash.php
      */
-    public function setPassword(string $password, string $method = 'pbkdf2', int|string ...$func_args): void
-    {
+    public function setPassword(
+        #[SensitiveParameter] string $password,
+        string $method = 'pbkdf2',
+        int|string ...$func_args
+    ): void {
         $key = '';
 
         $method = strtolower($method);
@@ -888,7 +891,7 @@ abstract class SymmetricKey
      *
      * @see self::decrypt()
      */
-    public function encrypt(string $plaintext): string
+    public function encrypt(#[SensitiveParameter] string $plaintext): string
     {
         if ($this->paddable) {
             $plaintext = $this->pad($plaintext);
@@ -927,7 +930,7 @@ abstract class SymmetricKey
         if ($this->engine === self::ENGINE_OPENSSL) {
             switch ($this->mode) {
                 case self::MODE_STREAM:
-                    return openssl_encrypt($plaintext, $this->cipher_name_openssl, $this->key, OPENSSL_RAW_DATA | OPENSSL_ZERO_PADDING);
+                    return openssl_encrypt($plaintext, $this->cipher_name_openssl, $this->key, OPENSSL_RAW_DATA);
                 case self::MODE_ECB:
                     return openssl_encrypt($plaintext, $this->cipher_name_openssl, $this->key, OPENSSL_RAW_DATA | OPENSSL_ZERO_PADDING);
                 case self::MODE_CBC:
@@ -972,7 +975,7 @@ abstract class SymmetricKey
                     $overflow = $len % $this->block_size;
 
                     if ($overflow) {
-                        $ciphertext .= openssl_encrypt(substr($plaintext, 0, -$overflow) . str_repeat("\0", $this->block_size), $this->cipher_name_openssl, $this->key, OPENSSL_RAW_DATA | OPENSSL_ZERO_PADDING, $iv);
+                        $ciphertext .= openssl_encrypt(substr($plaintext, 0, -$overflow) . str_repeat("\0", $this->block_size), $this->cipher_name_openssl, $this->key, OPENSSL_RAW_DATA, $iv);
                         $iv = Strings::pop($ciphertext, $this->block_size);
 
                         $size = $len - $overflow;
@@ -981,13 +984,13 @@ abstract class SymmetricKey
                         $ciphertext .= $block;
                         $pos = $overflow;
                     } elseif ($len) {
-                        $ciphertext = openssl_encrypt($plaintext, $this->cipher_name_openssl, $this->key, OPENSSL_RAW_DATA | OPENSSL_ZERO_PADDING, $iv);
+                        $ciphertext = openssl_encrypt($plaintext, $this->cipher_name_openssl, $this->key, OPENSSL_RAW_DATA, $iv);
                         $iv = substr($ciphertext, -$this->block_size);
                     }
 
                     return $ciphertext;
                 case self::MODE_CFB8:
-                    $ciphertext = openssl_encrypt($plaintext, $this->cipher_name_openssl, $this->key, OPENSSL_RAW_DATA | OPENSSL_ZERO_PADDING, $this->encryptIV);
+                    $ciphertext = openssl_encrypt($plaintext, $this->cipher_name_openssl, $this->key, OPENSSL_RAW_DATA, $this->encryptIV);
                     if ($this->continuousBuffer) {
                         if (($len = strlen($ciphertext)) >= $this->block_size) {
                             $this->encryptIV = substr($ciphertext, -$this->block_size);
@@ -1002,7 +1005,7 @@ abstract class SymmetricKey
                     $iv = $this->encryptIV;
 
                     for ($i = 0; $i < $len; ++$i) {
-                        $xor = openssl_encrypt($iv, $this->cipher_name_openssl_ecb, $this->key, $this->openssl_options, $this->decryptIV);
+                        $xor = openssl_encrypt($iv, $this->cipher_name_openssl_ecb, $this->key, OPENSSL_RAW_DATA | OPENSSL_ZERO_PADDING, $this->decryptIV);
                         $ciphertext .= $plaintext[$i] ^ $xor;
                         $iv = substr($iv, 1) . $xor[0];
                     }
@@ -1234,7 +1237,7 @@ abstract class SymmetricKey
         if ($this->engine === self::ENGINE_OPENSSL) {
             switch ($this->mode) {
                 case self::MODE_STREAM:
-                    $plaintext = openssl_decrypt($ciphertext, $this->cipher_name_openssl, $this->key, OPENSSL_RAW_DATA | OPENSSL_ZERO_PADDING);
+                    $plaintext = openssl_decrypt($ciphertext, $this->cipher_name_openssl, $this->key, OPENSSL_RAW_DATA);
                     break;
                 case self::MODE_ECB:
                     $plaintext = openssl_decrypt($ciphertext, $this->cipher_name_openssl, $this->key, OPENSSL_RAW_DATA | OPENSSL_ZERO_PADDING);
@@ -1281,21 +1284,21 @@ abstract class SymmetricKey
                     }
                     $overflow = $len % $this->block_size;
                     if ($overflow) {
-                        $plaintext .= openssl_decrypt(substr($ciphertext, 0, -$overflow), $this->cipher_name_openssl, $this->key, OPENSSL_RAW_DATA | OPENSSL_ZERO_PADDING, $iv);
+                        $plaintext .= openssl_decrypt(substr($ciphertext, 0, -$overflow), $this->cipher_name_openssl, $this->key, OPENSSL_RAW_DATA, $iv);
                         if ($len - $overflow) {
                             $iv = substr($ciphertext, -$overflow - $this->block_size, -$overflow);
                         }
-                        $iv = openssl_encrypt(str_repeat("\0", $this->block_size), $this->cipher_name_openssl, $this->key, OPENSSL_RAW_DATA | OPENSSL_ZERO_PADDING, $iv);
+                        $iv = openssl_encrypt(str_repeat("\0", $this->block_size), $this->cipher_name_openssl, $this->key, OPENSSL_RAW_DATA, $iv);
                         $plaintext .= $iv ^ substr($ciphertext, -$overflow);
                         $iv = substr_replace($iv, substr($ciphertext, -$overflow), 0, $overflow);
                         $pos = $overflow;
                     } elseif ($len) {
-                        $plaintext .= openssl_decrypt($ciphertext, $this->cipher_name_openssl, $this->key, OPENSSL_RAW_DATA | OPENSSL_ZERO_PADDING, $iv);
+                        $plaintext .= openssl_decrypt($ciphertext, $this->cipher_name_openssl, $this->key, OPENSSL_RAW_DATA, $iv);
                         $iv = substr($ciphertext, -$this->block_size);
                     }
                     break;
                 case self::MODE_CFB8:
-                    $plaintext = openssl_decrypt($ciphertext, $this->cipher_name_openssl, $this->key, OPENSSL_RAW_DATA | OPENSSL_ZERO_PADDING, $this->decryptIV);
+                    $plaintext = openssl_decrypt($ciphertext, $this->cipher_name_openssl, $this->key, OPENSSL_RAW_DATA, $this->decryptIV);
                     if ($this->continuousBuffer) {
                         if (($len = strlen($ciphertext)) >= $this->block_size) {
                             $this->decryptIV = substr($ciphertext, -$this->block_size);
@@ -1310,7 +1313,7 @@ abstract class SymmetricKey
                     $iv = $this->decryptIV;
 
                     for ($i = 0; $i < $len; ++$i) {
-                        $xor = openssl_encrypt($iv, $this->cipher_name_openssl_ecb, $this->key, $this->openssl_options, $this->decryptIV);
+                        $xor = openssl_encrypt($iv, $this->cipher_name_openssl_ecb, $this->key, OPENSSL_RAW_DATA, $this->decryptIV);
                         $plaintext .= $ciphertext[$i] ^ $xor;
                         $iv = substr($iv, 1) . $xor[0];
                     }
@@ -1520,16 +1523,12 @@ abstract class SymmetricKey
     /**
      * Sets the authentication tag
      *
-     * Only used in GCM mode
+     * Only used in GCM mode and only when decrypting data and only when decrypting data
      *
      * @see self::decrypt()
      */
     public function setTag(string $tag): void
     {
-        if ($this->usePoly1305 && !isset($this->poly1305Key) && method_exists($this, 'createPoly1305Key')) {
-            $this->createPoly1305Key();
-        }
-
         if ($this->mode != self::MODE_GCM && !$this->usePoly1305) {
             throw new BadMethodCallException('Authentication tags are only utilized in GCM mode or with Poly1305');
         }
@@ -1601,7 +1600,7 @@ abstract class SymmetricKey
         $overflow = strlen($plaintext) % $block_size;
         if ($overflow) {
             $plaintext2 = Strings::pop($plaintext, $overflow); // ie. trim $plaintext to a multiple of $block_size and put rest of $plaintext in $plaintext2
-            $encrypted = openssl_encrypt($plaintext . str_repeat("\0", $block_size), $this->cipher_name_openssl, $key, OPENSSL_RAW_DATA | OPENSSL_ZERO_PADDING, $encryptIV);
+            $encrypted = openssl_encrypt($plaintext . str_repeat("\0", $block_size), $this->cipher_name_openssl, $key, OPENSSL_RAW_DATA, $encryptIV);
             $temp = Strings::pop($encrypted, $block_size);
             $ciphertext .= $encrypted . ($plaintext2 ^ $temp);
             if ($this->continuousBuffer) {
@@ -1609,7 +1608,7 @@ abstract class SymmetricKey
                 $encryptIV = $temp;
             }
         } elseif (!strlen($buffer['ciphertext'])) {
-            $ciphertext .= openssl_encrypt($plaintext . str_repeat("\0", $block_size), $this->cipher_name_openssl, $key, OPENSSL_RAW_DATA | OPENSSL_ZERO_PADDING, $encryptIV);
+            $ciphertext .= openssl_encrypt($plaintext . str_repeat("\0", $block_size), $this->cipher_name_openssl, $key, OPENSSL_RAW_DATA, $encryptIV);
             $temp = Strings::pop($ciphertext, $block_size);
             if ($this->continuousBuffer) {
                 $encryptIV = $temp;
@@ -1653,7 +1652,7 @@ abstract class SymmetricKey
 
         if (strlen($plaintext)) {
             if ($overflow) {
-                $ciphertext .= openssl_encrypt(substr($plaintext, 0, -$overflow) . str_repeat("\0", $block_size), $this->cipher_name_openssl, $key, OPENSSL_RAW_DATA | OPENSSL_ZERO_PADDING, $encryptIV);
+                $ciphertext .= openssl_encrypt(substr($plaintext, 0, -$overflow) . str_repeat("\0", $block_size), $this->cipher_name_openssl, $key, OPENSSL_RAW_DATA, $encryptIV);
                 $xor = Strings::pop($ciphertext, $block_size);
                 if ($this->continuousBuffer) {
                     $encryptIV = $xor;
@@ -1663,7 +1662,7 @@ abstract class SymmetricKey
                     $buffer['xor'] = $xor;
                 }
             } else {
-                $ciphertext = openssl_encrypt($plaintext, $this->cipher_name_openssl, $key, OPENSSL_RAW_DATA | OPENSSL_ZERO_PADDING, $encryptIV);
+                $ciphertext = openssl_encrypt($plaintext, $this->cipher_name_openssl, $key, OPENSSL_RAW_DATA, $encryptIV);
                 if ($this->continuousBuffer) {
                     $encryptIV = substr($ciphertext, -$block_size) ^ substr($plaintext, -$block_size);
                 }
@@ -1892,6 +1891,7 @@ abstract class SymmetricKey
      */
     public function getEngine(): string
     {
+        $this->setEngine();
         return self::ENGINE_MAP[$this->engine];
     }
 
@@ -1906,7 +1906,7 @@ abstract class SymmetricKey
 
         $candidateEngines = [
             self::ENGINE_LIBSODIUM,
-            self::ENGINE_OPENSSL_GCM,
+            self::ENGINE_OPENSSL_AEAD,
             self::ENGINE_OPENSSL,
             self::ENGINE_EVAL,
         ];
@@ -1992,14 +1992,14 @@ abstract class SymmetricKey
             $this->createPoly1305Key();
         }
 
-        $this->enbuffer = $this->debuffer = ['ciphertext' => '', 'xor' => '', 'pos' => 0, 'enmcrypt_init' => true];
+        $this->enbuffer = $this->debuffer = ['ciphertext' => '', 'xor' => '', 'pos' => 0];
         //$this->newtag = $this->oldtag = false;
 
         if ($this->usesNonce()) {
             if (!isset($this->nonce)) {
                 throw new InvalidStateException('No nonce has been defined - call setNonce() first');
             }
-            if ($this->mode == self::MODE_GCM && !in_array($this->engine, [self::ENGINE_LIBSODIUM, self::ENGINE_OPENSSL_GCM])) {
+            if ($this->mode == self::MODE_GCM && !in_array($this->engine, [self::ENGINE_LIBSODIUM, self::ENGINE_OPENSSL_AEAD])) {
                 $this->setupGCM();
             }
         } else {
@@ -2007,7 +2007,7 @@ abstract class SymmetricKey
         }
 
         if (!isset($this->iv) && !in_array($this->mode, [self::MODE_STREAM, self::MODE_ECB])) {
-            if ($this->mode != self::MODE_GCM || !in_array($this->engine, [self::ENGINE_LIBSODIUM, self::ENGINE_OPENSSL_GCM])) {
+            if ($this->mode != self::MODE_GCM || !in_array($this->engine, [self::ENGINE_LIBSODIUM, self::ENGINE_OPENSSL_AEAD])) {
                 throw new InvalidStateException('No IV has been defined - call setIV() first');
             }
         }
@@ -2772,7 +2772,7 @@ abstract class SymmetricKey
      * for more info
      *
      * @see self::decrypt()
-          * @see self::encrypt()
+     * @see self::encrypt()
      */
     private function ghash(string $x): string
     {
@@ -2804,7 +2804,7 @@ abstract class SymmetricKey
      *
      * @see self::setupGCM()
      * @see self::decrypt()
-          * @see self::encrypt()
+     * @see self::encrypt()
      */
     private static function len64(string $str): string
     {
@@ -2816,7 +2816,7 @@ abstract class SymmetricKey
      *
      * @see self::setupGCM()
      * @see self::decrypt()
-          * @see self::encrypt()
+     * @see self::encrypt()
      */
     protected static function nullPad128(string $str): string
     {
@@ -2830,8 +2830,8 @@ abstract class SymmetricKey
      * On my system ChaCha20, with libsodium, takes 0.5s. With this custom Poly1305 implementation
      * it takes 1.2s.
      *
-     *@see self::decrypt()
-          * @see self::encrypt()
+     * @see self::decrypt()
+     * @see self::encrypt()
      */
     protected function poly1305(string $text): string
     {

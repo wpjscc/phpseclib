@@ -2,7 +2,7 @@
 
 /**
  * @author    Jim Wigginton <terrafrost@php.net>
- * @copyright 2014 Jim Wigginton
+ * @copyright 2019-2026 Jim Wigginton
  * @license   http://www.opensource.org/licenses/mit-license.html  MIT License
  */
 
@@ -146,9 +146,7 @@ class Salsa20Test extends PhpseclibTestCase
         return $result;
     }
 
-    /**
-     * @dataProvider engineVectors
-     */
+    #[\PHPUnit\Framework\Attributes\DataProvider('engineVectors')]
     public function testVectors($engine, $key, $iv, $expected): void
     {
         $cipher = new Salsa20();

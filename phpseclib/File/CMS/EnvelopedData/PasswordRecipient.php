@@ -8,9 +8,9 @@
  * Encode and decode CMS / EnvelopedData / PasswordRecipient files.
  *
  * @author    Jim Wigginton <terrafrost@php.net>
- * @copyright 2022 Jim Wigginton
+ * @copyright 2026 Jim Wigginton
  * @license   http://www.opensource.org/licenses/mit-license.html  MIT License
- * @link      http://phpseclib.sourceforge.net
+ * @link      https://phpseclib.com/
  */
 
 declare(strict_types=1);
@@ -29,7 +29,7 @@ class PasswordRecipient extends Recipient implements DerivableKey, SearchableKey
     {
         //ASN1::disableCacheInvalidation();
         $rules = [];
-        $rules['keyEncryptionAlgorithm'] = $rules['keyDerivationAlgorithm'] = [self::class, 'mapInAlgoParams'];
+        $rules['keyEncryptionAlgorithm'] = $rules['keyDerivationAlgorithm'] = self::mapInAlgoParams(...);
         $decoded = ASN1::decodeBER($encoded);
         $recipient = ASN1::map($decoded, Maps\PasswordRecipientInfo::MAP, $rules);
         //ASN1::enableCacheInvalidation();

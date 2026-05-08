@@ -2,7 +2,7 @@
 
 /**
  * @author    Jim Wigginton <terrafrost@php.net>
- * @copyright 2014 Jim Wigginton
+ * @copyright 2014-2026 Jim Wigginton
  * @license   http://www.opensource.org/licenses/mit-license.html  MIT License
  */
 
@@ -10,7 +10,6 @@ declare(strict_types=1);
 
 namespace phpseclib4\Tests\Unit\Crypt;
 
-use phpseclib4\Crypt\Random;
 use phpseclib4\Crypt\RC4;
 use phpseclib4\Tests\PhpseclibTestCase;
 
@@ -201,9 +200,7 @@ class RC4Test extends PhpseclibTestCase
         return $result;
     }
 
-    /**
-     * @dataProvider engineVectors
-     */
+    #[\PHPUnit\Framework\Attributes\DataProvider('engineVectors')]
     public function testVectors($engine, $key, $offset, $expected): void
     {
         $rc4 = new RC4();
@@ -238,7 +235,7 @@ class RC4Test extends PhpseclibTestCase
         $plaintext = str_repeat('.', 100);
 
         for ($keyLen = 5; $keyLen <= 256; $keyLen++) {
-            $key = Random::string($keyLen);
+            $key = random_bytes($keyLen);
             $objects[0]->setKey($key);
             $ref = $objects[0]->encrypt($plaintext);
             for ($i = 1; $i < count($objects); $i++) {

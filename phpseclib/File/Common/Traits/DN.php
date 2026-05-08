@@ -3,12 +3,12 @@
 /**
  * DN Helper for misc ASN1 classes
  *
- * PHP version 5
+ * PHP version 8.1+
  *
  * @author    Jim Wigginton <terrafrost@php.net>
- * @copyright 2015 Jim Wigginton
+ * @copyright 2025-2026 Jim Wigginton
  * @license   http://www.opensource.org/licenses/mit-license.html  MIT License
- * @link      http://phpseclib.sourceforge.net
+ * @link      https://phpseclib.com/
  */
 
 declare(strict_types=1);
@@ -37,43 +37,6 @@ use phpseclib4\File\ASN1\Types\{BaseString, BaseType, Choice, OID, UTF8String};
  */
 trait DN
 {
-    /**
-     * Return internal array representation
-     *
-     * @see \phpseclib4\File\X509::getDN()
-     */
-    public const DN_ARRAY = 0;
-    /**
-     * Return string
-     *
-     * @see \phpseclib4\File\X509::getDN()
-     */
-    public const DN_STRING = 1;
-    /**
-     * Return ASN.1 name string
-     *
-     * @see \phpseclib4\File\X509::getDN()
-     */
-    public const DN_ASN1 = 2;
-    /**
-     * Return OpenSSL compatible array
-     *
-     * @see \phpseclib4\File\X509::getDN()
-     */
-    public const DN_OPENSSL = 3;
-    /**
-     * Return canonical ASN.1 RDNs string
-     *
-     * @see \phpseclib4\File\X509::getDN()
-     */
-    public const DN_CANON = 4;
-    /**
-     * Return name hash for file indexing
-     *
-     * @see \phpseclib4\File\X509::getDN()
-     */
-    public const DN_HASH = 5;
-
     public static function mapInDNs(array|Constructed &$dn): void
     {
         ASN1::disableCacheInvalidation();
@@ -440,7 +403,7 @@ trait DN
                 $dn = ASN1::encodeDER($dn, Maps\Name::MAP);
                 $dn = ASN1::decodeBER($dn);
                 $rules = [];
-                $rules['rdnSequence']['*']['*'] = [self::class, 'mapInDNs'];
+                $rules['rdnSequence']['*']['*'] = self::mapInDNs(...);
                 $dn = ASN1::map($dn, Maps\Name::MAP, $rules);
                 return $dn->toArray();
             case self::DN_ASN1:

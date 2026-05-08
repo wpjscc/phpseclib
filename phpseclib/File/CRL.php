@@ -11,9 +11,9 @@
  * {@link http://web.archive.org/web/19961027104704/http://www3.netscape.com/eng/security/cert-exts.html Netscape Certificate Extensions}.
  *
  * @author    Jim Wigginton <terrafrost@php.net>
- * @copyright 2022 Jim Wigginton
+ * @copyright 2025-2026 Jim Wigginton
  * @license   http://www.opensource.org/licenses/mit-license.html  MIT License
- * @link      http://phpseclib.sourceforge.net
+ * @link      https://phpseclib.com/
  */
 
 declare(strict_types=1);
@@ -39,6 +39,43 @@ class CRL implements \ArrayAccess, \Countable, \Iterator, Signable
     use \phpseclib4\File\Common\Traits\Extension;
     use \phpseclib4\File\Common\Traits\DN;
     use \phpseclib4\File\Common\Traits\ASN1Signature;
+
+    /**
+     * Return internal array representation
+     *
+     * @see \phpseclib4\File\X509::getDN()
+     */
+    public const DN_ARRAY = 0;
+    /**
+     * Return string
+     *
+     * @see \phpseclib4\File\X509::getDN()
+     */
+    public const DN_STRING = 1;
+    /**
+     * Return ASN.1 name string
+     *
+     * @see \phpseclib4\File\X509::getDN()
+     */
+    public const DN_ASN1 = 2;
+    /**
+     * Return OpenSSL compatible array
+     *
+     * @see \phpseclib4\File\X509::getDN()
+     */
+    public const DN_OPENSSL = 3;
+    /**
+     * Return canonical ASN.1 RDNs string
+     *
+     * @see \phpseclib4\File\X509::getDN()
+     */
+    public const DN_CANON = 4;
+    /**
+     * Return name hash for file indexing
+     *
+     * @see \phpseclib4\File\X509::getDN()
+     */
+    public const DN_HASH = 5;
 
     private Constructed|array $crl;
     private bool $hideFullDecode = false;
@@ -88,9 +125,9 @@ class CRL implements \ArrayAccess, \Countable, \Iterator, Signable
         $decoded = ASN1::decodeBER($crl);
 
         $rules = [];
-        $rules['tbsCertList']['issuer']['rdnSequence']['*']['*'] = [self::class, 'mapInDNs'];
-        $rules['tbsCertList']['crlExtensions']['*'] = [self::class, 'mapInExtensions'];
-        $rules['tbsCertList']['revokedCertificates']['*']['crlEntryExtensions']['*'] = [self::class, 'mapInExtensions'];
+        $rules['tbsCertList']['issuer']['rdnSequence']['*']['*'] = self::mapInDNs(...);
+        $rules['tbsCertList']['crlExtensions']['*'] = self::mapInExtensions(...);
+        $rules['tbsCertList']['revokedCertificates']['*']['crlEntryExtensions']['*'] = self::mapInExtensions(...);
 
         return ASN1::map($decoded, Maps\CertificateList::MAP, $rules);
     }

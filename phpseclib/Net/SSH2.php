@@ -3,7 +3,7 @@
 /**
  * Pure-PHP implementation of SSHv2.
  *
- * PHP version 5
+ * PHP version 8.1+
  *
  * Here are some examples of how to use this library:
  * <code>
@@ -38,9 +38,9 @@
  * </code>
  *
  * @author    Jim Wigginton <terrafrost@php.net>
- * @copyright 2007 Jim Wigginton
+ * @copyright 2007-2026 Jim Wigginton
  * @license   http://www.opensource.org/licenses/mit-license.html  MIT License
- * @link      http://phpseclib.sourceforge.net
+ * @link      https://phpseclib.com/
  */
 
 declare(strict_types=1);
@@ -57,7 +57,6 @@ use phpseclib4\Crypt\{
     Hash,
     RC4,
     RSA,
-    Random,
     Rijndael,
     TripleDES,
     Twofish
@@ -1575,7 +1574,7 @@ class SSH2
                 }
         }
 
-        $client_cookie = Random::string(16);
+        $client_cookie = random_bytes(16);
 
         $kexinit_payload_client = pack('Ca*', MessageType::KEXINIT, $client_cookie);
         $kexinit_payload_client .= Strings::packSSH2(
@@ -2237,8 +2236,10 @@ class SSH2
      * {@internal It might be worthwhile, at some point, to protect against {@link http://tools.ietf.org/html/rfc4251#section-9.3.9 traffic analysis}
      *           by sending dummy SSH_MSG_IGNORE messages.}
      */
-    private function login_helper(string $username, string|PrivateKey|array|Agent|null $password = null): bool
-    {
+    private function login_helper(
+        string $username,
+        #[SensitiveParameter] string|PrivateKey|array|Agent|null $password = null
+    ): bool {
         if (!($this->bitmap & self::MASK_LOGIN_REQ)) {
             $packet = Strings::packSSH2('Cs', MessageType::SERVICE_REQUEST, 'ssh-userauth');
             $this->send_binary_packet($packet);
@@ -2510,7 +2511,7 @@ class SSH2
      * {@internal It might be worthwhile, at some point, to protect against {@link http://tools.ietf.org/html/rfc4251#section-9.3.9 traffic analysis}
      *           by sending dummy SSH_MSG_IGNORE messages.}
      */
-    private function privatekey_login(string $username, PrivateKey $privatekey): bool
+    private function privatekey_login(string $username, #[SensitiveParameter] PrivateKey $privatekey): bool
     {
         $publickey = $privatekey->getPublicKey();
 
@@ -4174,8 +4175,10 @@ class SSH2
      *
      * @see self::_get_binary_packet()
      */
-    protected function send_binary_packet(string $data, ?string $logged = null): void
-    {
+    protected function send_binary_packet(
+        #[SensitiveParameter] string $data,
+        ?string $logged = null
+    ): void {
         if (!is_resource($this->fsock) || feof($this->fsock)) {
             $this->disconnect_helper(DisconnectReason::CONNECTION_LOST);
             throw new ConnectionClosedException('Connection closed prematurely');
@@ -4220,7 +4223,7 @@ class SSH2
                 $packet_length += 4;
         }
 
-        $padding = Random::string($padding_length);
+        $padding = random_bytes($padding_length);
 
         // we subtract 4 from packet_length because the packet_length field isn't supposed to include itself
         $packet = pack('NCa*', $packet_length - 4, $padding_length, $data . $padding);
@@ -4456,8 +4459,10 @@ class SSH2
      *
      * Spans multiple SSH_MSG_CHANNEL_DATAs if appropriate
      */
-    protected function send_channel_packet(int $client_channel, string $data): void
-    {
+    protected function send_channel_packet(
+        int $client_channel,
+        #[SensitiveParameter] string $data
+    ): void {
         if (
             isset($this->channel_buffers_write[$client_channel])
             && str_starts_with($data, $this->channel_buffers_write[$client_channel])
@@ -4579,7 +4584,7 @@ class SSH2
     public function getLog(): array|string|null
     {
         if (!defined('NET_SSH2_LOGGING')) {
-            return false;
+            return null;
         }
 
         switch (NET_SSH2_LOGGING) {

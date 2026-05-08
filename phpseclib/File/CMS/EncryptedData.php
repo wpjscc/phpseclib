@@ -8,9 +8,9 @@
  * Encode and decode CMS / CompressedData files.
  *
  * @author    Jim Wigginton <terrafrost@php.net>
- * @copyright 2022 Jim Wigginton
+ * @copyright 2026 Jim Wigginton
  * @license   http://www.opensource.org/licenses/mit-license.html  MIT License
- * @link      http://phpseclib.sourceforge.net
+ * @link      https://phpseclib.com/
  */
 
 declare(strict_types=1);
@@ -18,7 +18,7 @@ declare(strict_types=1);
 namespace phpseclib4\File\CMS;
 
 use phpseclib4\Common\Functions\Strings;
-use phpseclib4\Crypt\{AES, EC, RSA, Random, TripleDES};
+use phpseclib4\Crypt\{AES, EC, RSA, TripleDES};
 use phpseclib4\Exception\{
     BadDecryptionException,
     BadMethodCallException,
@@ -51,16 +51,19 @@ class EncryptedData implements \ArrayAccess, \Countable, \Iterator
     private Constructed|array $cms;
     public string $cek; // content encryption key
 
-    public function __construct(string $data, string $encryptionAlgorithm = 'aes128-CBC-PAD', #[\SensitiveParameter] ?string $key = null)
-    {
+    public function __construct(
+        #[SensitiveParameter] string $data,
+        string $encryptionAlgorithm = 'aes128-CBC-PAD',
+        #[\SensitiveParameter] ?string $key = null
+    ) {
         $cipher = self::getPBES2EncryptionObject($encryptionAlgorithm);
         $keyLength = $cipher->getKeyLength() >> 3;
         if (isset($key) && strlen($key) != $keyLength) {
             throw new LengthException('key is ' . strlen($key) . " bytes long; it should be $keyLength bytes long");
         }
-        $this->cek = $key ?? Random::string($keyLength);
+        $this->cek = $key ?? random_bytes($keyLength);
         $cipher->setKey($this->cek);
-        $iv = Random::string($cipher->getBlockLengthInBytes());
+        $iv = random_bytes($cipher->getBlockLengthInBytes());
         $cipher->setIV($iv);
         $encrypted = $cipher->encrypt($data);
         $this->cms = [
@@ -486,7 +489,7 @@ class EncryptedData implements \ArrayAccess, \Countable, \Iterator
         // see https://datatracker.ietf.org/doc/html/rfc3211
         $keyCheck = ~substr($this->cek, 0, 3);
         $contentCipher = self::getPBES2EncryptionObject((string) $this->cms['content']['encryptedContentInfo']['contentEncryptionAlgorithm']['algorithm']);
-        $padding = Random::string(max($keyCipher->getBlockLengthInBytes(), 2 * $contentCipher->getBlockLengthInBytes()) - strlen($this->cek) - 4);
+        $padding = random_bytes(max($keyCipher->getBlockLengthInBytes(), 2 * $contentCipher->getBlockLengthInBytes()) - strlen($this->cek) - 4);
         $cekBlock = chr(strlen($this->cek)) . $keyCheck . $this->cek . $padding;
 
         $encryptedKey = $keyCipher->encrypt($cekBlock);
@@ -508,8 +511,11 @@ class EncryptedData implements \ArrayAccess, \Countable, \Iterator
         return $recipient;
     }
 
-    public function createNewRecipientFromKeyWithIdentifier(string $key, string $identifier, ?\DateTimeInterface $date = null): KEKRecipient
-    {
+    public function createNewRecipientFromKeyWithIdentifier(
+        #[SensitiveParameter] string $key,
+        string $identifier,
+        ?\DateTimeInterface $date = null
+    ): KEKRecipient {
         // to decrypt with openssl cli do this:
         // openssl cms -decrypt -in enveloped.pem -secretkey <hex-kek> -secretkeyid <hex-key-id> -out plaintext.txt
 
@@ -672,7 +678,7 @@ class EncryptedData implements \ArrayAccess, \Countable, \Iterator
     {
         $icv = substr(sha1($cek, true), 0, 8);
         $cekicv = $cek . $icv;
-        $iv = Random::string(8);
+        $iv = random_bytes(8);
         $cipher = new TripleDES('cbc');
         $cipher->disablePadding();
         $cipher->setKey($kek);

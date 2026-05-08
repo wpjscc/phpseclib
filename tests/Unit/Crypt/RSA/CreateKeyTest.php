@@ -2,7 +2,7 @@
 
 /**
  * @author    Jim Wigginton <terrafrost@php.net>
- * @copyright 2015 Jim Wigginton
+ * @copyright 2015-2026 Jim Wigginton
  * @license   http://www.opensource.org/licenses/mit-license.html  MIT License
  */
 
@@ -33,9 +33,7 @@ class CreateKeyTest extends PhpseclibTestCase
         return [$publickey, $privatekey];
     }
 
-    /**
-     * @depends testCreateKey
-     */
+    #[\PHPUnit\Framework\Attributes\Depends('testCreateKey')]
     public function testEncryptDecrypt($args): void
     {
         [$publickey, $privatekey] = $args;

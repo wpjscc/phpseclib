@@ -3,7 +3,7 @@
 /**
  * PKCS#8 Formatted Key Handler
  *
- * PHP version 5
+ * PHP version 8.1+
  *
  * Used by PHP's openssl_public_encrypt() and openssl's rsautl (when -pubin is set)
  *
@@ -18,9 +18,9 @@
  * for keys. This just extends that same concept to public keys (much like ssh-keygen)
  *
  * @author    Jim Wigginton <terrafrost@php.net>
- * @copyright 2015 Jim Wigginton
+ * @copyright 2016-2026 Jim Wigginton
  * @license   http://www.opensource.org/licenses/mit-license.html  MIT License
- * @link      http://phpseclib.sourceforge.net
+ * @link      https://phpseclib.com/
  */
 
 declare(strict_types=1);
@@ -80,8 +80,10 @@ abstract class PKCS8 extends PKCS
     /**
      * Break a public or private key down into its constituent components
      */
-    protected static function load(string $key, #[SensitiveParameter] ?string $password = null): array
-    {
+    protected static function load(
+        #[SensitiveParameter] string $key,
+        #[SensitiveParameter] ?string $password = null
+    ): array {
         $isPublic = str_contains($key, 'PUBLIC');
         $isPrivate = str_contains($key, 'PRIVATE');
 
@@ -193,8 +195,13 @@ abstract class PKCS8 extends PKCS
     /**
      * Wrap a private key appropriately
      */
-    protected static function wrapPrivateKey(string $key, Element|BaseType $params = new ExplicitNull(), #[SensitiveParameter] ?string $password = null, ?string $oid = null, array $options = []): string
-    {
+    protected static function wrapPrivateKey(
+        #[SensitiveParameter] string $key,
+        Element|BaseType $params = new ExplicitNull(),
+        #[SensitiveParameter] ?string $password = null,
+        ?string $oid = null,
+        array $options = []
+    ): string {
         self::initialize_static_variables();
 
         $key = [
@@ -247,8 +254,12 @@ abstract class PKCS8 extends PKCS
     /**
      * Wrap a public key appropriately
      */
-    protected static function wrapPublicKey(string $key, Element|BaseType $params = new ExplicitNull(), ?string $oid = null, array $options = []): string
-    {
+    protected static function wrapPublicKey(
+        string $key,
+        Element|BaseType $params = new ExplicitNull(),
+        ?string $oid = null,
+        array $options = []
+    ): string {
         self::initialize_static_variables();
 
         $key = [
@@ -276,7 +287,7 @@ abstract class PKCS8 extends PKCS
     /**
      * Perform some preliminary parsing of the key
      */
-    private static function preParse(string $key): array
+    private static function preParse(#[SensitiveParameter] string $key): array
     {
         self::initialize_static_variables();
 
@@ -299,7 +310,7 @@ abstract class PKCS8 extends PKCS
     /**
      * Returns the encryption parameters used by the key
      */
-    public static function extractEncryptionAlgorithm(string $key): array
+    public static function extractEncryptionAlgorithm(#[SensitiveParameter] string $key): array
     {
         $decoded = self::preParse($key);
 

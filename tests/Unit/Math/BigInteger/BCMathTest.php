@@ -2,7 +2,7 @@
 
 /**
  * @author    Andreas Fischer <bantu@phpbb.com>
- * @copyright 2013 Andreas Fischer
+ * @copyright 2013-2026 Andreas Fischer
  * @license   http://www.opensource.org/licenses/mit-license.html  MIT License
  */
 
@@ -27,9 +27,7 @@ class BCMathTest extends TestCase
         return new BCMath($x, $base);
     }
 
-    /**
-     * @group github2089
-     */
+    #[\PHPUnit\Framework\Attributes\Group('github2089')]
     public function testBCSscale(): void
     {
         bcscale(1);

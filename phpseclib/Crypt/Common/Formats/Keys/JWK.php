@@ -3,12 +3,12 @@
 /**
  * JSON Web Key (RFC7517) Handler
  *
- * PHP version 5
+ * PHP version 8.1+
  *
  * @author    Jim Wigginton <terrafrost@php.net>
- * @copyright 2015 Jim Wigginton
+ * @copyright 2022-2026 Jim Wigginton
  * @license   http://www.opensource.org/licenses/mit-license.html  MIT License
- * @link      http://phpseclib.sourceforge.net
+ * @link      https://phpseclib.com/
  */
 
 declare(strict_types=1);
@@ -27,7 +27,7 @@ abstract class JWK
     /**
      * Break a public or private key down into its constituent components
      */
-    protected static function loadHelper(string $key): \stdClass
+    protected static function loadHelper(#[SensitiveParameter] string $key): \stdClass
     {
         $key = preg_replace('#\s#', '', $key); // remove whitespace
 

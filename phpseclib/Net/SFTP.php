@@ -325,10 +325,11 @@ class SFTP extends SSH2
      * Connects to an SFTP server
      *
      * @param string|resource $host
+     * @param bool            $useAsyncIo @see \phpseclib4\Net\SSH2::__construct()
      */
-    public function __construct(mixed $host, int $port = 22, int $timeout = 10)
+    public function __construct(mixed $host, int $port = 22, int $timeout = 10, bool $useAsyncIo = false)
     {
-        parent::__construct($host, $port, $timeout);
+        parent::__construct($host, $port, $timeout, $useAsyncIo);
 
         $this->max_sftp_packet = 1 << 15;
 

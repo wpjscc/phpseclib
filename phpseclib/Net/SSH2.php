@@ -680,6 +680,31 @@ class SSH2
     protected ?int $timeout = null;
 
     /**
+     * Use React event-loop driven reads (non-blocking socket, internal buffer, React\Async\await),
+     * similar to Kodus\Mail\SMTP\SMTPClient.
+     *
+     * Requires react/async (react/event-loop, react/promise) at runtime.
+     */
+    private bool $useAsyncIo = false;
+
+    /**
+     * Bytes queued by the async read listener before the binary packet layer consumes them.
+     */
+    private string $asyncReadBuffer = '';
+
+    /**
+     * @var mixed
+     */
+    private mixed $asyncAwaitDeferred = null;
+
+    /**
+     * @var \Closure():void|null
+     */
+    private ?\Closure $asyncReadListener = null;
+
+    private bool $asyncReadStreamRegistered = false;
+
+    /**
      * Current Timeout
      *
      * @see SSH2::get_channel_packet()
@@ -996,12 +1021,15 @@ class SSH2
      *
      * @see self::login()
      * @param string|resource $host
+     * @param bool            $useAsyncIo When true, the socket is set non-blocking after connect and reads are
+     *                                   dispatched via React's default loop (see react/async). Composer: require react/async.
      */
-    public function __construct(mixed $host, int $port = 22, int $timeout = 10)
+    public function __construct(mixed $host, int $port = 22, int $timeout = 10, bool $useAsyncIo = false)
     {
         self::$connections[$this->getResourceId()] = \WeakReference::create($this);
 
         $this->timeout = $timeout;
+        $this->useAsyncIo = $useAsyncIo;
 
         if (is_resource($host)) {
             $this->fsock = $host;
@@ -1011,6 +1039,160 @@ class SSH2
         if (Strings::is_stringable($host)) {
             $this->host = (string) $host;
             $this->port = $port;
+        }
+    }
+
+    /**
+     * Whether this instance was constructed with async I/O enabled.
+     */
+    public function isAsyncIoEnabled(): bool
+    {
+        return $this->useAsyncIo;
+    }
+
+    private function ensureReactAvailable(): void
+    {
+        if (!class_exists(\React\EventLoop\Loop::class)) {
+            throw new \RuntimeException(
+                'Async SSH2 requires react/event-loop and react/async; install with: composer require react/async'
+            );
+        }
+        if (!function_exists('React\Async\await')) {
+            throw new \RuntimeException(
+                'Async SSH2 requires react/async (provides React\\Async\\await); install with: composer require react/async'
+            );
+        }
+    }
+
+    private function registerAsyncReadStream(): void
+    {
+        if ($this->asyncReadStreamRegistered || !is_resource($this->fsock)) {
+            return;
+        }
+        $this->ensureReactAvailable();
+        $this->asyncReadListener = function (): void {
+            $this->asyncDrainSocket();
+        };
+        \React\EventLoop\Loop::addReadStream($this->fsock, $this->asyncReadListener);
+        $this->asyncReadStreamRegistered = true;
+        $this->asyncDrainSocket();
+    }
+
+    private function removeAsyncReadStream(): void
+    {
+        if (!$this->asyncReadStreamRegistered || !is_resource($this->fsock)) {
+            $this->asyncReadStreamRegistered = false;
+
+            return;
+        }
+        \React\EventLoop\Loop::removeReadStream($this->fsock);
+        $this->asyncReadStreamRegistered = false;
+    }
+
+    /**
+     * Drain readable bytes from the socket into {@see $asyncReadBuffer} and wake any await.
+     */
+    private function asyncDrainSocket(): void
+    {
+        if (!is_resource($this->fsock)) {
+            return;
+        }
+        $chunk = @stream_get_contents($this->fsock, 65536);
+        if ($chunk === false) {
+            $chunk = '';
+        }
+        if ($chunk !== '') {
+            $this->asyncReadBuffer .= $chunk;
+            $this->asyncWakeupWaiter();
+
+            return;
+        }
+        if (feof($this->fsock)) {
+            $this->asyncRejectWaiter(new ConnectionClosedException('Connection closed by server'));
+        }
+    }
+
+    private function asyncWakeupWaiter(): void
+    {
+        if ($this->asyncAwaitDeferred !== null) {
+            $deferred = $this->asyncAwaitDeferred;
+            $this->asyncAwaitDeferred = null;
+            $deferred->resolve(true);
+        }
+    }
+
+    private function asyncRejectWaiter(\Throwable $e): void
+    {
+        if ($this->asyncAwaitDeferred !== null) {
+            $deferred = $this->asyncAwaitDeferred;
+            $this->asyncAwaitDeferred = null;
+            $deferred->reject($e);
+        }
+    }
+
+    /**
+     * Block (via React\Async\await) until the read listener delivers more data or timeout.
+     *
+     * @throws TimeoutException
+     */
+    private function asyncAwaitMoreData(): void
+    {
+        $this->ensureReactAvailable();
+        $deferred = new \React\Promise\Deferred();
+        $this->asyncAwaitDeferred = $deferred;
+
+        [$sec, $usec] = $this->get_stream_timeout();
+        $waitSeconds = $sec + $usec / 1000000;
+        $timer = null;
+        if ($waitSeconds > 0) {
+            $timer = \React\EventLoop\Loop::addTimer($waitSeconds, function () use ($deferred): void {
+                if ($this->asyncAwaitDeferred === $deferred) {
+                    $this->asyncAwaitDeferred = null;
+                    $deferred->reject(new TimeoutException('Timed out waiting for server'));
+                }
+            });
+        }
+
+        try {
+            \React\Async\await($deferred->promise());
+        } finally {
+            if ($timer !== null) {
+                \React\EventLoop\Loop::cancelTimer($timer);
+            }
+        }
+    }
+
+    /**
+     * Read one identification line (RFC 4253), matching stream_get_line(..., 255, "\n") behaviour via the async buffer.
+     *
+     * @throws UnexpectedValueException
+     * @throws TimeoutException
+     */
+    private function asyncReadIdentificationLine(): string
+    {
+        $line = '';
+        while (true) {
+            $pos = strpos($this->asyncReadBuffer, "\n");
+            if ($pos !== false) {
+                $take = $pos + 1;
+                $chunk = substr($this->asyncReadBuffer, 0, $take);
+                $this->asyncReadBuffer = substr($this->asyncReadBuffer, $take);
+
+                return $line . $chunk;
+            }
+            if (strlen($this->asyncReadBuffer) >= 255) {
+                $line .= substr($this->asyncReadBuffer, 0, 255);
+                $this->asyncReadBuffer = substr($this->asyncReadBuffer, 255);
+
+                continue;
+            }
+            $this->asyncDrainSocket();
+            if (strlen($this->asyncReadBuffer) === 0 && feof($this->fsock)) {
+                throw new UnexpectedValueException('Error reading SSH identification string; are you sure you\'re connecting to an SSH server?');
+            }
+            if (strlen($this->asyncReadBuffer) === 0) {
+                $this->asyncAwaitMoreData();
+            }
         }
     }
 
@@ -1136,11 +1318,26 @@ class SSH2
             }
         }
 
+        if ($this->useAsyncIo) {
+            $this->ensureReactAvailable();
+            stream_set_blocking($this->fsock, false);
+            $this->registerAsyncReadStream();
+        }
+
         $this->identifier = $this->generate_identifier();
 
         if ($this->send_id_string_first) {
             $start = microtime(true);
-            fwrite($this->fsock, $this->identifier . "\r\n");
+            if ($this->useAsyncIo && is_resource($this->fsock)) {
+                stream_set_blocking($this->fsock, true);
+            }
+            try {
+                fwrite($this->fsock, $this->identifier . "\r\n");
+            } finally {
+                if ($this->useAsyncIo && is_resource($this->fsock)) {
+                    stream_set_blocking($this->fsock, false);
+                }
+            }
             $elapsed = round(microtime(true) - $start, 4);
             if (defined('NET_SSH2_LOGGING')) {
                 $this->append_log("-> (network: $elapsed)", $this->identifier . "\r\n");
@@ -1156,42 +1353,60 @@ class SSH2
            MUST be able to process such lines." */
         $data = '';
         $totalElapsed = 0;
-        while (!feof($this->fsock) && !preg_match('#(.*)^(SSH-(\d\.\d+).*)#ms', $data, $matches)) {
-            $line = '';
-            while (true) {
+        if ($this->useAsyncIo) {
+            while (!feof($this->fsock) && !preg_match('#(.*)^(SSH-(\d\.\d+).*)#ms', $data, $matches)) {
                 if ($this->curTimeout) {
                     if ($this->curTimeout < 0) {
                         throw new TimeoutException('Connection timed out whilst receiving server identification string');
                     }
-                    $read = [$this->fsock];
-                    $write = $except = null;
-                    $start = microtime(true);
-                    $sec = (int) floor($this->curTimeout);
-                    $usec = (int) (1000000 * ($this->curTimeout - $sec));
-                    if (static::stream_select($read, $write, $except, $sec, $usec) === false) {
-                        throw new TimeoutException('Connection timed out whilst receiving server identification string');
-                    }
-                    $elapsed = microtime(true) - $start;
-                    $totalElapsed += $elapsed;
+                }
+                $start = microtime(true);
+                $line = $this->asyncReadIdentificationLine();
+                $elapsed = microtime(true) - $start;
+                $totalElapsed += $elapsed;
+                if ($this->curTimeout) {
                     $this->curTimeout -= $elapsed;
                 }
-
-                $temp = stream_get_line($this->fsock, 255, "\n");
-                if ($temp === false) {
-                    throw new UnexpectedValueException('Error reading SSH identification string; are you sure you\'re connecting to an SSH server?');
-                }
-
-                $line .= $temp;
-                if (strlen($temp) == 255) {
-                    continue;
-                }
-
-                $line .= "\n";
-
-                break;
+                $data .= $line;
             }
+        } else {
+            while (!feof($this->fsock) && !preg_match('#(.*)^(SSH-(\d\.\d+).*)#ms', $data, $matches)) {
+                $line = '';
+                while (true) {
+                    if ($this->curTimeout) {
+                        if ($this->curTimeout < 0) {
+                            throw new TimeoutException('Connection timed out whilst receiving server identification string');
+                        }
+                        $read = [$this->fsock];
+                        $write = $except = null;
+                        $start = microtime(true);
+                        $sec = (int) floor($this->curTimeout);
+                        $usec = (int) (1000000 * ($this->curTimeout - $sec));
+                        if (static::stream_select($read, $write, $except, $sec, $usec) === false) {
+                            throw new TimeoutException('Connection timed out whilst receiving server identification string');
+                        }
+                        $elapsed = microtime(true) - $start;
+                        $totalElapsed += $elapsed;
+                        $this->curTimeout -= $elapsed;
+                    }
 
-            $data .= $line;
+                    $temp = stream_get_line($this->fsock, 255, "\n");
+                    if ($temp === false) {
+                        throw new UnexpectedValueException('Error reading SSH identification string; are you sure you\'re connecting to an SSH server?');
+                    }
+
+                    $line .= $temp;
+                    if (strlen($temp) == 255) {
+                        continue;
+                    }
+
+                    $line .= "\n";
+
+                    break;
+                }
+
+                $data .= $line;
+            }
         }
 
         if (defined('NET_SSH2_LOGGING')) {
@@ -1235,7 +1450,16 @@ class SSH2
 
         if (!$this->send_id_string_first) {
             $start = microtime(true);
-            fwrite($this->fsock, $this->identifier . "\r\n");
+            if ($this->useAsyncIo && is_resource($this->fsock)) {
+                stream_set_blocking($this->fsock, true);
+            }
+            try {
+                fwrite($this->fsock, $this->identifier . "\r\n");
+            } finally {
+                if ($this->useAsyncIo && is_resource($this->fsock)) {
+                    stream_set_blocking($this->fsock, false);
+                }
+            }
             $elapsed = round(microtime(true) - $start, 4);
             if (defined('NET_SSH2_LOGGING')) {
                 $this->append_log("-> (network: $elapsed)", $this->identifier . "\r\n");
@@ -3084,6 +3308,10 @@ class SSH2
      */
     protected function reset_connection(): void
     {
+        $this->removeAsyncReadStream();
+        $this->asyncReadBuffer = '';
+        $this->asyncAwaitDeferred = null;
+
         if (is_resource($this->fsock) && get_resource_type($this->fsock) === 'stream') {
             fclose($this->fsock);
         }
@@ -3182,6 +3410,49 @@ class SSH2
                 throw new TimeoutException('Timed out waiting for server');
             }
             $this->send_keep_alive();
+
+            if ($this->useAsyncIo) {
+                $start = microtime(true);
+                $need = $packet->size - strlen($packet->raw);
+                $raw = '';
+                if (strlen($this->asyncReadBuffer) >= $need) {
+                    $raw = substr($this->asyncReadBuffer, 0, $need);
+                    $this->asyncReadBuffer = substr($this->asyncReadBuffer, $need);
+                } elseif (strlen($this->asyncReadBuffer) > 0) {
+                    $raw = $this->asyncReadBuffer;
+                    $this->asyncReadBuffer = '';
+                } else {
+                    $this->asyncDrainSocket();
+                    if (strlen($this->asyncReadBuffer) >= $need) {
+                        $raw = substr($this->asyncReadBuffer, 0, $need);
+                        $this->asyncReadBuffer = substr($this->asyncReadBuffer, $need);
+                    } elseif (strlen($this->asyncReadBuffer) > 0) {
+                        $raw = $this->asyncReadBuffer;
+                        $this->asyncReadBuffer = '';
+                    }
+                }
+                if ($raw === '') {
+                    $this->asyncAwaitMoreData();
+                    $elapsed = microtime(true) - $start;
+                    $packet->read_time += $elapsed;
+                    if ($this->curTimeout > 0) {
+                        $this->curTimeout -= $elapsed;
+                    }
+
+                    continue;
+                }
+                $elapsed = microtime(true) - $start;
+                $packet->read_time += $elapsed;
+                if ($this->curTimeout > 0) {
+                    $this->curTimeout -= $elapsed;
+                }
+                $packet->raw .= $raw;
+                if (!$packet->packet_length) {
+                    $this->get_binary_packet_size($packet);
+                }
+
+                continue;
+            }
 
             [$sec, $usec] = $this->get_stream_timeout();
             stream_set_timeout($this->fsock, $sec, $usec);
@@ -4025,7 +4296,16 @@ class SSH2
         }
 
         $start = microtime(true);
-        $sent = @fwrite($this->fsock, $packet);
+        if ($this->useAsyncIo && is_resource($this->fsock)) {
+            stream_set_blocking($this->fsock, true);
+        }
+        try {
+            $sent = @fwrite($this->fsock, $packet);
+        } finally {
+            if ($this->useAsyncIo && is_resource($this->fsock)) {
+                stream_set_blocking($this->fsock, false);
+            }
+        }
         $stop = microtime(true);
 
         if (defined('NET_SSH2_LOGGING')) {
